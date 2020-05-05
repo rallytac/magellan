@@ -4,20 +4,24 @@
 //
 
 #include "AvahiDiscoverer.hpp"
+#include "ILogger.hpp"
 
 namespace Magellan
 {
     static const char *TAG = "AvahiDiscoverer";
+    extern ILogger *logger;
 
     AvahiDiscoverer::AvahiDiscoverer()
     {
-        _pollerLoop = nullptr;
+        logger->i(TAG, "{%p} ctor()", (void*) this);
+        _poller = nullptr;
         _client = nullptr;
         _serviceBrowser = nullptr;
     }
 
     AvahiDiscoverer::~AvahiDiscoverer()
     {
+        logger->i(TAG, "{%p} ~dtor()", (void*) this);
         stop();
     }
         
@@ -29,25 +33,34 @@ namespace Magellan
         {
             int err;
 
-            _pollerLoop = avahi_simple_poll_new();
-            if(_pollerLoop == nullptr)
+            _poller = avahi_threaded_poll_new();
+            if(_poller == nullptr)
             {
+                logger->e(TAG, "{%p} avahi_threaded_poll_new failed()", (void*) this);
                 throw "";
             }
 
-            _client = avahi_client_new(avahi_simple_poll_get(_pollerLoop), AVAHI_CLIENT_NO_FAIL, clientCallbackHelper, (void*)this, &err);
+            _client = avahi_client_new(avahi_threaded_poll_get(_poller), AVAHI_CLIENT_NO_FAIL, clientCallbackHelper, (void*)this, &err);
             if(_client == nullptr)
             {
+                logger->e(TAG, "{%p} avahi_client_new failed() - %s", (void*) this, avahi_strerror(err));
                 throw "";
             }
 
-            _serviceBrowser = avahi_service_browser_new(_client, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, serviceType, nullptr, (AvahiLookupFlags)0, browseCallbackHelper, _client);
+            _serviceBrowser = avahi_service_browser_new(_client, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, serviceType, nullptr, (AvahiLookupFlags)0, AvahiDiscoverer::browseCallbackHelper, (void*)this);
             if(_serviceBrowser == nullptr)
             {
+                logger->e(TAG, "{%p} avahi_service_browser_new failed('%s') - %s", (void*) this, serviceType, avahi_strerror(avahi_client_errno(_client)));
                 throw "";
             }
 
-            avahi_simple_poll_loop(_pollerLoop);
+            if(avahi_threaded_poll_start(_poller) < 0)
+            {
+                logger->e(TAG, "{%p} avahi_threaded_poll_start failed('%s') - %s", (void*) this, serviceType, avahi_strerror(avahi_client_errno(_client)));
+                throw "";
+            }
+
+            logger->d(TAG, "{%p} started", (void*) this);
         }
         catch(...)
         {
@@ -60,23 +73,40 @@ namespace Magellan
 
     void AvahiDiscoverer::stop()
     {
-        if(_serviceBrowser != nullptr)
+        if(_poller != nullptr)
         {
-            avahi_service_browser_free(_serviceBrowser);
-            _serviceBrowser = nullptr;
-        }
+            avahi_threaded_poll_stop(_poller);
 
-        if(_client != nullptr)
-        {
-            avahi_client_free(_client);
-            _client = nullptr;
-        }
+            if(_serviceBrowser != nullptr)
+            {
+                avahi_service_browser_free(_serviceBrowser);
+                _serviceBrowser = nullptr;
+            }
 
-        if(_pollerLoop != nullptr)
-        {
-            avahi_simple_poll_free(_pollerLoop);
-            _pollerLoop = nullptr;
+            if(_client != nullptr)
+            {
+                avahi_client_free(_client);
+                _client = nullptr;
+            }
+
+            if(_poller != nullptr)
+            {
+                avahi_threaded_poll_free(_poller);
+                _poller = nullptr;
+            }
+
+            logger->d(TAG, "{%p} stopped", (void*) this);
         }
+    }
+
+    void AvahiDiscoverer::pause()
+    {
+        logger->d(TAG, "{%p} paused", (void*) this);
+    }
+
+    void AvahiDiscoverer::resume()
+    {
+        logger->d(TAG, "{%p} resumed", (void*) this);
     }
 
     /*static*/ void AvahiDiscoverer::clientCallbackHelper(AvahiClient *c, 
@@ -91,7 +121,7 @@ namespace Magellan
     {      
         if (state == AVAHI_CLIENT_FAILURE) 
         {
-            avahi_simple_poll_quit(_pollerLoop);
+            avahi_threaded_poll_quit(_poller);
         }
     }                        
 
@@ -105,6 +135,7 @@ namespace Magellan
                                         AvahiLookupResultFlags flags,
                                         void* userData)
     {
+        
         ((AvahiDiscoverer*)userData)->browseCallback(b, interface, protocol, event, name, type, domain, flags);
     }                                        
 
@@ -116,25 +147,35 @@ namespace Magellan
                             const char *type,
                             const char *domain,
                             AvahiLookupResultFlags flags)
-    {     
+    {   
         switch(event) 
         {
             case AVAHI_BROWSER_FAILURE:
-                getLogger()->e(TAG, "(Browser) %s", avahi_strerror(avahi_client_errno(_client)));
-                avahi_simple_poll_quit(_pollerLoop);
+                logger->e(TAG, "{%p} %s", (void*) this, avahi_strerror(avahi_client_errno(_client)));
+                avahi_threaded_poll_quit(_poller);
                 break;
 
             case AVAHI_BROWSER_NEW:
-                getLogger()->d(TAG, "(Browser) NEW: service '%s' of type '%s' in domain '%s'", name, type, domain);
+                AvahiServiceResolver *asr;
+                
+                asr = avahi_service_resolver_new(_client, interface, protocol, name, type, domain, AVAHI_PROTO_UNSPEC, (AvahiLookupFlags)0, resolveCallbackHelper, (void*) this);
+                if(asr != nullptr)
+                {
+                    logger->d(TAG, "{%p} resolving new service '%s' of type '%s' in domain '%s'", (void*) this, name, type, domain);
+                }
+                else
+                {
+                    logger->e(TAG, "{%p} failed to initiate resolving new service '%s' of type '%s' in domain '%s' - %s", (void*) this, name, type, domain, avahi_strerror(avahi_client_errno(_client)));
+                }
                 break;
                 
             case AVAHI_BROWSER_REMOVE:
-                getLogger()->d(TAG, "(Browser) REMOVE: service '%s' of type '%s' in domain '%s'", name, type, domain);
+                logger->d(TAG, "{%p} removed service '%s' of type '%s' in domain '%s'", (void*) this, name, type, domain);
                 break;
 
             case AVAHI_BROWSER_ALL_FOR_NOW:
             case AVAHI_BROWSER_CACHE_EXHAUSTED:
-                getLogger()->d(TAG, "(Browser) %s", event == AVAHI_BROWSER_CACHE_EXHAUSTED ? "CACHE_EXHAUSTED" : "ALL_FOR_NOW");
+                //logger->d(TAG, "{%p} %s", (void*) this, event == AVAHI_BROWSER_CACHE_EXHAUSTED ? "CACHE_EXHAUSTED" : "ALL_FOR_NOW");
                 break;
         }
     }
@@ -172,7 +213,7 @@ namespace Magellan
         switch (event) 
         {
             case AVAHI_RESOLVER_FAILURE:
-                getLogger()->e(TAG, "(Resolver) Failed to resolve service '%s' of type '%s' in domain '%s': %s", name, type, domain, avahi_strerror(avahi_client_errno(avahi_service_resolver_get_client(r))));
+                logger->e(TAG, "{%p} failed to resolve service '%s' of type '%s' in domain '%s': %s", (void*) this, name, type, domain, avahi_strerror(avahi_client_errno(avahi_service_resolver_get_client(r))));
                 break;
 
             case AVAHI_RESOLVER_FOUND: 
@@ -180,12 +221,11 @@ namespace Magellan
                 char a[AVAHI_ADDRESS_STR_MAX];
                 char *t;
 
-                getLogger()->d(TAG, "Service '%s' of type '%s' in domain '%s':", name, type, domain);
                 avahi_address_snprint(a, sizeof(a), address);
                 t = avahi_string_list_to_string(txt);
 
-                getLogger()->d(TAG, 
-                                    "\t%s:%u (%s)"
+                logger->d(TAG, "{%p} resolved service '%s' of type '%s' in domain '%s': "
+                                    "%s:%u (%s)"
                                     ", TXT=%s"
                                     ", cookie is %u"
                                     ", is_local: %i"
@@ -193,6 +233,7 @@ namespace Magellan
                                     ", wide_area: %i"
                                     ", multicast: %i"
                                     ", cached: %i",
+                                (void*) this, name, type, domain,
                                 hostName, port, a,
                                 t,
                                 avahi_string_list_get_service_cookie(txt),
@@ -205,6 +246,7 @@ namespace Magellan
                 avahi_free(t);
             }
         }
+
         avahi_service_resolver_free(r);
     }
 }

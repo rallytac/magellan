@@ -33,6 +33,12 @@ namespace Magellan
         /** @brief Stop the discoverer **/
         virtual void stop() = 0;
 
+        /** @brief Pause the discoverer **/
+        virtual void pause() = 0;
+
+        /** @brief Resume the discoverer **/
+        virtual void resume() = 0;
+
         /** @brief Set the work queue **/
         inline virtual void setWorkQueue(WorkQueue *wq)
         {

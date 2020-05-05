@@ -1,7 +1,8 @@
 #!/bin/bash
 
-SRC_ROOT=`pwd`
-BUILD_ROOT=${SRC_ROOT}/.build
+PROJ_ROOT=`pwd`
+SRC_ROOT=${PROJ_ROOT}/src
+BUILD_ROOT=${PROJ_ROOT}/.build
 
 mkdir -p "${BUILD_ROOT}"
 cd "${BUILD_ROOT}"

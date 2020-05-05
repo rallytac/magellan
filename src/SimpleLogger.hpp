@@ -23,6 +23,16 @@ namespace Magellan
         /** @brief Destructor **/
         virtual ~SimpleLogger();
 
+
+        /** @brief Set the callback to be invoked to output log messages
+         * 
+         * The logging subsystem in the library guarantees that the output hook function is
+         * called under lock so there is no need for hook to perform locking of it's own other
+         * than for it's own purposes.
+         * 
+         * Also, this function call should return as soon as possible as the library will be
+         * held up while logging is underway.
+         **/
         inline void setOutputHook(PFN_MAGELLAN_LOGGING_HOOK outputHook)
         {
             _outputHook = outputHook;

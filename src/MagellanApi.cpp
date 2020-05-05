@@ -12,8 +12,13 @@
 
 static const char *TAG = "MagellanApi";
 
-static Magellan::WorkQueue          g_wq;
-static Magellan::SimpleLogger       g_logger;
+static Magellan::WorkQueue   g_wq;
+Magellan::SimpleLogger       g_logger;
+
+namespace Magellan
+{
+    ILogger *logger = &g_logger;
+}
 
 MAGELLAN_API int magellanSetLoggingHook(PFN_MAGELLAN_LOGGING_HOOK hookFn)
 {
@@ -46,6 +51,7 @@ MAGELLAN_API int magellanBeginDiscovery(const char * _Nullable configuration, Ma
     Magellan::Discoverer    *disco = new Magellan::AvahiDiscoverer();
 
     *pToken = (MagellanToken_t)disco;
+    disco->start("_http._tcp");
 
     g_logger.d(TAG, "magellanBeginDiscovery returns %p", (void*) (*pToken));
 
@@ -57,6 +63,10 @@ MAGELLAN_API int magellanEndDiscovery(MagellanToken_t token)
     int rc = MAGELLAN_RESULT_OK;
 
     g_logger.d(TAG, "magellanEndDiscovery %p", (void*) token);
+
+    Magellan::Discoverer    *disco = (Magellan::Discoverer*)token;
+    disco->stop();
+    disco->releaseReference();
     
     return rc;
 }
@@ -68,7 +78,7 @@ MAGELLAN_API int magellanPauseDiscovery(MagellanToken_t token)
     g_logger.d(TAG, "magellanPauseDiscovery %p", (void*) token);
 
     Magellan::Discoverer    *disco = (Magellan::Discoverer*)token;
-    delete disco;
+    disco->pause();
     
     return rc;
 }
@@ -78,6 +88,9 @@ MAGELLAN_API int magellanResumeDiscovery(MagellanToken_t token)
     int rc = MAGELLAN_RESULT_OK;
 
     g_logger.d(TAG, "magellanResumeDiscovery %p", (void*) token);
+
+    Magellan::Discoverer    *disco = (Magellan::Discoverer*)token;
+    disco->resume();
     
     return rc;
 }

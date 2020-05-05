@@ -5,16 +5,29 @@
 
 cmake_minimum_required(VERSION 3.4.1)
 
+project(rtsmagellan)
+
+set(CMAKE_CXX_STANDARD 11)
+
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     set(LINUX true)
 endif()
+
+add_compile_options(-Wall 
+                    -Werror
+                    -fPIC
+                    -Wno-strict-aliasing
+                    -Wno-unused-value
+                    -fvisibility=hidden
+                    -O0 -ggdb -pedantic)
 
 #------------------------------------------------
 # magellan-static library
 #------------------------------------------------
 set(SOURCES MagellanApi.cpp
             WorkQueue.cpp
-            SimpleLogger.cpp)
+            SimpleLogger.cpp
+            ReferenceCountedObject.cpp)
 
 if(LINUX)
     set(SOURCES ${SOURCES} AvahiDiscoverer.cpp)

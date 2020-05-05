@@ -7,13 +7,14 @@
 #define MAGELLANOBJECT_HPP
 
 #include "ILogger.hpp"
+#include "ReferenceCountedObject.hpp"
 
 namespace Magellan
-{
+{   
     /**
      * @brief Base class for all Magellan objects
      **/
-    class MagellanObject
+    class MagellanObject : public ReferenceCountedObject
     {
     public:
         /** @brief Constructor **/
@@ -21,23 +22,6 @@ namespace Magellan
 
         /** @brief Destructor **/
         virtual ~MagellanObject()      {}
-        
-        /** @brief Set the logger **/
-        inline virtual void setLogger(ILogger *logger)
-        {
-            _logger = logger;
-        }
-
-        /** @brief Get the logger **/
-        inline virtual ILogger *getLogger()
-        {
-            return _logger;
-        }
-
-    private:
-        /** @brief Pointer to the logger **/
-        ILogger         *_logger;
     };
 }
-
 #endif

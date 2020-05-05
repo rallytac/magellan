@@ -36,3 +36,6 @@
 
 # Other
 .vscode/
+doc/output
+*.swp
+

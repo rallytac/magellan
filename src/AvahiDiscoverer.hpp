@@ -10,13 +10,12 @@
 
 #include <avahi-client/client.h>
 #include <avahi-client/lookup.h>
-#include <avahi-common/simple-watch.h>
+#include <avahi-common/thread-watch.h>
 #include <avahi-common/malloc.h>
 #include <avahi-common/error.h>
 
 #include "Discoverer.hpp"
 #include "Sem.hpp"
-
 
 namespace Magellan
 {
@@ -29,10 +28,11 @@ namespace Magellan
         
         virtual bool start(const char *serviceType);
         virtual void stop();
+        virtual void pause();
+        virtual void resume();
 
     private:
-        std::thread                 _pollerThread;
-        AvahiSimplePoll             *_pollerLoop;
+        AvahiThreadedPoll          *_poller;
         AvahiClient                 *_client;
         AvahiServiceBrowser         *_serviceBrowser;
 
