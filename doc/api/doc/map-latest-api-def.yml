@@ -1,0 +1,330 @@
+openapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/RallyTactical/map/latest
+info:
+  description: REST API To access assets
+  version: "latest"
+  title: Magellan Asset Protocol
+  contact:
+    email: support@rallytac.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: developers
+    description: Operations available to regular developers
+paths:
+  /config:
+    get:
+      tags:
+        - developers
+      summary: returns available talk groups from gateway
+      operationId: getTalkgroups
+      description: |
+        By passing in the appropriate options, you can search for
+        specific talkgroups
+      parameters:
+        - in: query
+          name: searchString
+          description: pass an optional search string for looking up talk groups
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: skip
+          description: number of records to skip for pagination
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - in: query
+          name: limit
+          description: maximum number of records to return
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            maximum: 50
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Configuration'
+        '400':
+          description: bad input parameter
+
+components:
+  schemas:
+    TalkGroup:
+      type: object
+      description: "Contains all the attributes for describing how a client interacts with talk group"
+      required: 
+        - "type"
+        - "id"
+        - "name"
+        - "rx"
+        - "tx"
+        - "txAudio"
+      properties:
+        type: 
+          type: "integer"
+          enum:
+            - 1
+            - 2 
+            - 3
+          description: "Specifies the group type. Valid types are 1=Audio, 2=Presence, 3=Raw"
+          example: 1
+          
+        id: 
+          type: "string"
+          description: "Unique identity for the group.\nNOTE: Groups configured with the same multicast addresses but with different id's will NOT be routed correctly via RallyPoints as they are considered different streams."
+          example: "{50a10974-ae32-4090-8fa7-137514e7c986}"
+      
+        name: 
+          type: "string"
+          description: "The human readable name for the group."
+          example: "Mutual Aid Channel"
+          
+        cryptoPassword: 
+          type: "string"
+          description : "Password to be used for encryption. Note that this is not the encryption key. TODO: Shaun, can you please elaborate."
+          
+        presence: 
+          description: "Specifies how presence should be handled"
+          required: 
+            - "format"
+          properties: 
+            forceOnAudioTransmit: 
+              type: "boolean"
+              description: "Will force the presence to be transmitted every time audio is transmitted"
+              default: false
+            format: 
+              type: "integer"
+              description: "Format to be used to represent presence information. 1=Enage Format, 2=Cursor On Target format. This is a simple XML based exchange standard that is used to share information about targets. Cursor on Target was originally developed by MITRE in 2002 in support of the U.S. Air Force Electronic Systems Center (ESC)"
+              example: 1
+            intervalSecs: 
+              type: "integer"
+              description: "The interval in seconds at which to send the presence descriptor on the presence group"
+              default: 30
+              example: 30
+          type: "object"
+          
+        rallypoints: 
+          type: "array"
+          description: "List of Rallypoint (s) the Group should use to connect to a RallyPoint router"
+  
+          items:
+            type: "object"
+            properties:
+              host:
+                type: "object"
+                description: "This is the host address for the Engine to connect to the RallyPoint service"
+                required: 
+                  - address
+                  - port
+                properties:
+                  address:
+                    type: "string"
+                    description: "IP Address"
+                    example: "192.168.1.1"
+                  port:
+                    type: "integer"
+                    description: "Port to connect to Rally Point on"
+                    example: 7443
+  
+        rx: 
+          type: "object"
+          description: "The network address for receiving network traffic on"
+          required: 
+            - "address"
+            - "port"
+          properties: 
+            address: 
+              type: "string"
+              description: "IP Address"
+              example: "234.5.6.7"
+            port: 
+              type: "integer"
+              description: "Port"
+              example: 15000
+              
+        tx: 
+          type: "object"
+          description: "The network address for transmitting network traffic to"
+          required: 
+            - "address"
+            - "port"
+          properties: 
+            address: 
+              type: "string"
+              description: "IP Address"
+              example: "234.5.6.7"
+            port: 
+              type: "integer"
+              description: "Port"
+              example: 15000
+              
+        txAudio: 
+          type: object
+          description: "Audio transmit options such as codec, framing size etc"
+          required: 
+            - "encoder"
+            - "maxTxSecs"
+          properties: 
+            encoder: 
+              type: "string"
+              description: "Specifies the Codec Type to use for the transmission"
+              enum: 
+                - ctG711ulaw
+                - ctG711alaw
+                - ctGsm610
+                - ctAmrNb4750 
+                - ctAmrNb5150
+                - ctAmrNb5900
+                - ctAmrNb6700
+                - ctAmrNb7400 
+                - ctAmrNb7950
+                - ctAmrNb10200
+                - ctAmrNb12200
+                - ctOpus6000
+                - ctOpus8000
+                - ctOpus10000
+                - ctOpus12000
+                - ctOpus14000
+                - ctOpus16000
+                - ctOpus18000
+                - ctOpus20000
+                - ctOpus22000
+                - ctOpus24000
+              default: ctOpus8000
+              example: ctOpus8000
+                
+            extensionSendInterval: 
+              type: "integer"
+              description: "The number pf packets when to periodically send the header extension"
+              default: 10
+              example: 10
+            fdx: 
+              type: "boolean"
+              default: false
+              example: false
+            framingMs: 
+              type: "integer"
+              description: "Audio sample framing size in milliseconds"
+              default: 60
+              example: 60
+            initialHeaderBurst: 
+              type: "integer"
+              description: "TODO: Shaun help"
+              default: 5
+              example: 5
+            maxTxSecs: 
+              type: "integer"
+              description: "Maximum number of seconds the Engine will transmit for. If 0 then no limit"
+              default: 0
+              example: 30
+            noHdrExt: 
+              type: "boolean"
+              description: "Set to true whether to disable header extensions"
+              default: false
+              example: false
+            trailingHeaderBurst: 
+              type: "integer"
+              description: "TODO: Shaun help"
+              default: 5
+              example:  5
+  
+        networkOptions: 
+          type: "object"
+          description: "Specifies the network options"
+          properties: 
+            priority: 
+              type: "integer"
+              minimum: 0
+              maximum: 0
+              description: "Transmission priority. This has meaning on some operating systems based on how their IP stack operates. It may or may not affect final packet marking.
+                0 = Best Effort
+                2 = Signaling
+                3 = Video
+                4 = Voice"
+              default: 4
+              example: 4
+            ttl: 
+              type: "integer"
+              description: "Time to live or hop limit is a mechanism that limits the lifespan or lifetime of data in a network. TTL prevents a data packet from circulating indefinitely."
+              default: 128
+              example: 128
+              
+        security:
+          type: object
+          description: "TODO: Shaun"
+          properties: 
+            minLevel: 
+              type: integer
+              description: "TODO: Shaun"
+              example: 1
+            maxLevel:
+              type: integer
+              description: "TODO: Shaun"
+              example: 7
+            
+          
+    Configuration:
+      type: object
+      description: "Contains all configuration and talk groups for the gateway"
+      required:
+      - version
+      - dateTimeStamp
+      properties:
+        version:
+          type: integer
+          description: "Everytime the configurion is updated, the version number is incremented"
+          example: 234
+          
+        dateTimeStamp:
+          type: string
+          format: date-time
+          description: "Date Time Stamp the last time the configuration version was updated. The format is as defined by RFC 3339, section 5.6"
+          example:  "2020-04-15T17:32:28Z"
+          
+        thingInfo:
+          type: object
+          description: "Provides more detailed information on a gateway device"
+          required:
+          - id
+          - type
+          - manufacturer
+          - capabilities
+          properties:
+            id:
+              type: string
+              description: "A GUID representing the gateway's unique ID. The GUID representation should be surrounded by braces."
+              example: "{1cca79c5-b0dd-4e1d-9fab-639f1319f908}"
+              
+            type:
+              type: string
+              description: "type of gateway"
+              example: "Radio Gateway"
+              
+            manufacturer:
+              type: string
+              description: "String representing the manufacturer"
+              example: "The Gigazoid Radio Company"
+              
+            capabilities:
+              type: array
+              description: "An array of capabilities eg ['voice','video','conferencing']" 
+              items: 
+                type: string
+              example: ["voice"]
+                
+                
+        talkGroups:
+          type: array
+          description: "A list of talk groups that can use used on the gateway"
+          items:
+            $ref: '#/components/schemas/TalkGroup'
