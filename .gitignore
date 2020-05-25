@@ -38,4 +38,4 @@
 .vscode/
 doc/output
 *.swp
-
+.DS_Store
