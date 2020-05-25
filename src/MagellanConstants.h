@@ -25,6 +25,25 @@ static const int MAGELLAN_RESULT_ALREADY_INITIALIZED = -3;
 static const int MAGELLAN_RESULT_GENERAL_FAILURE = -4;
 /** @} */
 
+/** @addtogroup logLevels Magellan Logging Levels
+ *
+ * Result codes are returned by calls to the API functions and most often are related to
+ * the submission of a request to Magellan rather than the outcome of that submission.
+ *
+ *  @{
+ */
+/** @brief Fatal */
+static const int MAGELLAN_LOG_LEVEL_FATAL = 0;
+/** @brief Error */
+static const int MAGELLAN_LOG_LEVEL_ERROR = 1;
+/** @brief Warning */
+static const int MAGELLAN_LOG_LEVEL_WARNING = 2;
+/** @brief Informational */
+static const int MAGELLAN_LOG_LEVEL_INFORMATIONAL = 3;
+/** @brief Debug */
+static const int MAGELLAN_LOG_LEVEL_DEBUG = 4;
+/** @} */
+
 /** @brief A NULL value for a Magellan token **/
 #define MAGELLAN_NULL_TOKEN                 nullptr
 

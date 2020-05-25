@@ -49,6 +49,8 @@ MAGELLAN_API int magellanShutdown();
 
 MAGELLAN_API int magellanSetLoggingHook(PFN_MAGELLAN_LOGGING_HOOK hookFn);
 
+MAGELLAN_API void magellanLogMessage(int level, const char * _Nonnull tag, const char * _Nonnull msg);
+
 MAGELLAN_API int magellanBeginDiscovery(const char * _Nullable serviceType, 
                                         MagellanToken_t * _Nonnull pToken,
                                         PFN_MAGELLAN_ASSET_DISCOVERY_HOOK hookFn,

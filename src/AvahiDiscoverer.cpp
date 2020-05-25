@@ -14,6 +14,7 @@ namespace Magellan
     AvahiDiscoverer::AvahiDiscoverer()
     {
         logger->i(TAG, "{%p} ctor()", (void*) this);
+        setImplementation("Avahi Linux");
         _poller = nullptr;
         _client = nullptr;
         _serviceBrowser = nullptr;
@@ -235,6 +236,19 @@ namespace Magellan
 
                 avahi_address_snprint(a, sizeof(a), address);
                 t = avahi_string_list_to_string(txt);
+
+                std::string json;
+
+                json.append("{");
+                    json.append("\"serviceType\":\""); json.append(getServiceType()); json.append("\"");
+                    json.append(",\"implementation\":\""); json.append(getImplementation()); json.append("\"");
+                    json.append(",\"name\":\""); json.append(name); json.append("\"");
+                    json.append(",\"type\":\""); json.append(type); json.append("\"");
+                    json.append(",\"domain\":\""); json.append(domain); json.append("\"");
+                    json.append(",\"hostName\":\""); json.append(hostName); json.append("\"");
+                json.append("}");
+
+                callHook(json.c_str());
 
                 logger->d(TAG, "{%p} resolved service '%s' of type '%s' in domain '%s': "
                                     "%s:%u (%s)"

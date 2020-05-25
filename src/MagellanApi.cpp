@@ -42,6 +42,8 @@ namespace Magellan
             {
                 disco = new AvahiDiscoverer();
                 disco->setServiceType(serviceType);
+                disco->setHook(hookFn);
+                disco->setUserData(userData);
             }
             else
             {
@@ -131,6 +133,33 @@ namespace Magellan
 MAGELLAN_API int magellanSetLoggingHook(PFN_MAGELLAN_LOGGING_HOOK hookFn)
 {
     return Magellan::setLoggingHook(hookFn);
+}
+
+MAGELLAN_API void magellanLogMessage(int level, const char * _Nonnull tag, const char * _Nonnull msg)
+{
+    switch(level)
+    {
+        case MAGELLAN_LOG_LEVEL_FATAL:
+            Magellan::logger->f(tag, "%s", msg);
+            break;
+
+        case MAGELLAN_LOG_LEVEL_ERROR:
+            Magellan::logger->e(tag, "%s", msg);
+            break;
+
+        case MAGELLAN_LOG_LEVEL_WARNING:
+            Magellan::logger->w(tag, "%s", msg);
+            break;
+
+        case MAGELLAN_LOG_LEVEL_INFORMATIONAL:
+            Magellan::logger->i(tag, "%s", msg);
+            break;
+
+        case MAGELLAN_LOG_LEVEL_DEBUG:
+        default:
+            Magellan::logger->d(tag, "%s", msg);
+            break;
+    }
 }
 
 MAGELLAN_API int magellanInitialize(const char * _Nullable configuration)

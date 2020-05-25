@@ -27,7 +27,7 @@ namespace Magellan
         {
         }
         
-        /** @brief Signal the sempahore **/
+        /** @brief Signal the semaphore **/
         inline void notify()
         {
             {

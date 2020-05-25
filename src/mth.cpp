@@ -25,6 +25,7 @@
 #include "MagellanApi.h"
 
 const size_t MAX_CMD_BUFF_SIZE = 4096;
+const char *LOG_TAG = "mth";
 
 void LoggingHook(int level, const char * _Nonnull tag, const char *msg);
 void DiscoveryHook(const char * _Nonnull detailJson, const void * _Nullable userData);
@@ -141,7 +142,7 @@ void LoggingHook(int level, const char * tag, const char *msg)
 
 void DiscoveryHook(const char * _Nonnull detailJson, const void * _Nullable userData)
 {
-    printf("DiscoveryHook: detailJson='%s'", detailJson);
+    magellanLogMessage(MAGELLAN_LOG_LEVEL_INFORMATIONAL, LOG_TAG, detailJson);
 }
 
 bool readInput(char *buff, size_t maxSize)

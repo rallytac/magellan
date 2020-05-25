@@ -40,7 +40,19 @@ namespace Magellan
         {
             return _serviceType.c_str();
         }
-        
+
+        /** @brief Set the implementation **/
+        inline virtual void setImplementation(const char *implementation)
+        {
+            _implementation = implementation;
+        }
+
+        /** @brief Get the implementation **/
+        inline virtual const char *getImplementation()
+        {
+            return _implementation.c_str();
+        }
+
         /** @brief Start the discoverer **/
         virtual bool start() = 0;
 
@@ -65,9 +77,45 @@ namespace Magellan
             return _wq;
         }
 
+        /** @brief Set the callback hook **/
+        inline virtual void setHook(PFN_MAGELLAN_ASSET_DISCOVERY_HOOK hook)
+        {
+            _hook = hook;
+        }
+
+        /** @brief Get the callback hook **/
+        inline virtual PFN_MAGELLAN_ASSET_DISCOVERY_HOOK getHook()
+        {
+            return _hook;
+        }
+
+        /** @brief Set the user data **/
+        inline virtual void setUserData(const void *userData)
+        {
+            _userData = userData;
+        }
+
+        /** @brief Get the user data **/
+        inline virtual const void *getUserData()
+        {
+            return _userData;
+        }
+
+        /** @brief Call the hook **/
+        virtual void callHook(const char *detailJson)
+        {
+            if(_hook != nullptr)
+            {
+                _hook(detailJson, _userData);
+            }
+        }
+
     private:
         /** @brief The service type for this discoverer **/
         std::string                         _serviceType;
+
+        /** @brief The implementation of this discoverer **/
+        std::string                         _implementation;
 
         /** @brief Pointer to the work queue **/
         WorkQueue                           *_wq;
