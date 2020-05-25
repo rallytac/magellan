@@ -5,7 +5,7 @@
     "url" : "https://virtserver.swaggerhub.com/RallyTactical/map/latest"
   } ],
   "info" : {
-    "description" : "REST API To access assets",
+    "description" : "REST API to access assets",
     "version" : "latest",
     "title" : "Magellan Asset Protocol",
     "contact" : {
@@ -24,9 +24,9 @@
     "/config" : {
       "get" : {
         "tags" : [ "developers" ],
-        "summary" : "returns available talk groups from gateway",
+        "summary" : "Returns available talk groups from gateway",
         "operationId" : "getTalkgroups",
-        "description" : "By passing in the appropriate options, you can search for\nspecific talkgroups\n",
+        "description" : "By passing in the appropriate options, you can search for\nspecific talkgroups",
         "parameters" : [ {
           "in" : "query",
           "name" : "searchString",
@@ -88,7 +88,7 @@
           },
           "id" : {
             "type" : "string",
-            "description" : "Unique identity for the group.\nNOTE: Groups configured with the same multicast addresses but with different id's will NOT be routed correctly via RallyPoints as they are considered different streams.",
+            "description" : "Unique identity for the group.\nNOTE: Groups configured with the same multicast addresses but with different IDs may not be routed correctly via infrastructure as they are considered different streams.  Identifiers may take any form but the requirement is that they are unique across all enterprises.  Implementors are free to use whatever format that makes sense.  While a Globally Unique Identifier (GUID) such as '{50a10974-ae32-4090-8fa7-137514e7c986}' is a simple, useable option, a more complex coding mechanism such as 'com.examplecompany.uk.london.westminster.tactical.001' is equally valid.",
             "example" : "{50a10974-ae32-4090-8fa7-137514e7c986}"
           },
           "name" : {
@@ -98,7 +98,7 @@
           },
           "cryptoPassword" : {
             "type" : "string",
-            "description" : "Password to be used for encryption. Note that this is not the encryption key. TODO: Shaun, can you please elaborate."
+            "description" : "Password to be used for encryption. Note that this is not the encryption key.  Rather, it is the binary crypto material to be used as part of the input to a PBKDF2 algorithm for generating the symmetric encryption key.  As this value is binary, it is represented here in hexidecimal format with every two hex characters representing a single binary byte."
           },
           "presence" : {
             "description" : "Specifies how presence should be handled",
@@ -125,23 +125,23 @@
           },
           "rallypoints" : {
             "type" : "array",
-            "description" : "List of Rallypoint (s) the Group should use to connect to a RallyPoint router",
+            "description" : "List of Engage-compatible Rallypoints the group should use to bridge multicast over unicast network infrastructure",
             "items" : {
               "type" : "object",
               "properties" : {
                 "host" : {
                   "type" : "object",
-                  "description" : "This is the host address for the Engine to connect to the RallyPoint service",
+                  "description" : "Details for the host system to connect to",
                   "required" : [ "address", "port" ],
                   "properties" : {
                     "address" : {
                       "type" : "string",
-                      "description" : "IP Address",
-                      "example" : "192.168.1.1"
+                      "description" : "FQDN or IP address",
+                      "example" : "rpmesh.example.com"
                     },
                     "port" : {
                       "type" : "integer",
-                      "description" : "Port to connect to Rally Point on",
+                      "description" : "Rallypoint TCP port",
                       "example" : 7443
                     }
                   }
@@ -151,7 +151,7 @@
           },
           "rx" : {
             "type" : "object",
-            "description" : "The network address for receiving network traffic on",
+            "description" : "The network address for receiving network traffic",
             "required" : [ "address", "port" ],
             "properties" : {
               "address" : {
@@ -168,7 +168,7 @@
           },
           "tx" : {
             "type" : "object",
-            "description" : "The network address for transmitting network traffic to",
+            "description" : "The network address for transmitting network traffic",
             "required" : [ "address", "port" ],
             "properties" : {
               "address" : {
@@ -185,19 +185,19 @@
           },
           "txAudio" : {
             "type" : "object",
-            "description" : "Audio transmit options such as codec, framing size etc",
-            "required" : [ "encoder", "maxTxSecs" ],
+            "description" : "Audio transmit options such as CODEC and framing size",
+            "required" : [ "encoder" ],
             "properties" : {
               "encoder" : {
                 "type" : "string",
-                "description" : "Specifies the Codec Type to use for the transmission",
+                "description" : "Specifies the CODEC type to use for the transmission",
                 "enum" : [ "ctG711ulaw", "ctG711alaw", "ctGsm610", "ctAmrNb4750", "ctAmrNb5150", "ctAmrNb5900", "ctAmrNb6700", "ctAmrNb7400", "ctAmrNb7950", "ctAmrNb10200", "ctAmrNb12200", "ctOpus6000", "ctOpus8000", "ctOpus10000", "ctOpus12000", "ctOpus14000", "ctOpus16000", "ctOpus18000", "ctOpus20000", "ctOpus22000", "ctOpus24000" ],
                 "default" : "ctOpus8000",
                 "example" : "ctOpus8000"
               },
               "extensionSendInterval" : {
                 "type" : "integer",
-                "description" : "The number pf packets when to periodically send the header extension",
+                "description" : "Packet interval at which to include RTP header extensions",
                 "default" : 10,
                 "example" : 10
               },
@@ -214,14 +214,14 @@
               },
               "initialHeaderBurst" : {
                 "type" : "integer",
-                "description" : "TODO: Shaun help",
+                "description" : "Specifies the number of RTP packets containing header extensions that are to be sent at the beginning of a talk burst.  It is recommended that a burst of more than 1 packet be included at the initiation of transmission to minimize the chances of syncrhonization delay on receivers in the event that the network infrastructure drops the first few packets of a transmission.",
                 "default" : 5,
                 "example" : 5
               },
               "maxTxSecs" : {
                 "type" : "integer",
-                "description" : "Maximum number of seconds the Engine will transmit for. If 0 then no limit",
-                "default" : 0,
+                "description" : "Maximum number of seconds allowed for transmission. If 0 then no limit.  Be aware that no transmission limit could render the system inoperable if a badly behaved endpoint goes into a 'Transmit Locked' ",
+                "default" : 30,
                 "example" : 30
               },
               "noHdrExt" : {
@@ -232,7 +232,7 @@
               },
               "trailingHeaderBurst" : {
                 "type" : "integer",
-                "description" : "TODO: Shaun help",
+                "description" : "Specifies the number of RTP packets containing header extensions that are to be sent at the end of a talk burst.  It is recommended that a burst of more than 1 packet be included at the conclusion of transmission so that packets dropped by the network infrastructure do not cause receivers to wait an undue amount of time before detecting end of transmission.",
                 "default" : 5,
                 "example" : 5
               }
@@ -260,17 +260,19 @@
           },
           "security" : {
             "type" : "object",
-            "description" : "TODO: Shaun",
+            "description" : "Specifies the minimum and maximum security/classification levels associated with the group.  Applications that are sensitive group-level security are advised to pay attention to the security settings on the group and advise their users on the classification level range that should be adhered to for communications on the group.",
             "properties" : {
               "minLevel" : {
                 "type" : "integer",
-                "description" : "TODO: Shaun",
-                "example" : 1
+                "description" : "The minimum security level associated with the group.",
+                "default" : 0,
+                "example" : 0
               },
               "maxLevel" : {
                 "type" : "integer",
-                "description" : "TODO: Shaun",
-                "example" : 7
+                "description" : "The minimum security level associated with the group.",
+                "default" : 0,
+                "example" : 0
               }
             }
           }
