@@ -22,50 +22,62 @@ namespace Magellan
     AvahiDiscoverer::~AvahiDiscoverer()
     {
         logger->i(TAG, "{%p} ~dtor()", (void*) this);
+    }
+
+    void AvahiDiscoverer::deleteThis()
+    {
         stop();
+        ReferenceCountedObject::deleteThis();
     }
         
-    bool AvahiDiscoverer::start(const char *serviceType)
+    bool AvahiDiscoverer::start()
     {
         bool rc = false;
 
-        try
+        if(_poller == nullptr)
         {
-            int err;
-
-            _poller = avahi_threaded_poll_new();
-            if(_poller == nullptr)
+            try
             {
-                logger->e(TAG, "{%p} avahi_threaded_poll_new failed()", (void*) this);
-                throw "";
-            }
+                int err;
 
-            _client = avahi_client_new(avahi_threaded_poll_get(_poller), AVAHI_CLIENT_NO_FAIL, clientCallbackHelper, (void*)this, &err);
-            if(_client == nullptr)
+                _poller = avahi_threaded_poll_new();
+                if(_poller == nullptr)
+                {
+                    logger->e(TAG, "{%p} avahi_threaded_poll_new failed()", (void*) this);
+                    throw "";
+                }
+
+                _client = avahi_client_new(avahi_threaded_poll_get(_poller), AVAHI_CLIENT_NO_FAIL, clientCallbackHelper, (void*)this, &err);
+                if(_client == nullptr)
+                {
+                    logger->e(TAG, "{%p} avahi_client_new failed() - %s", (void*) this, avahi_strerror(err));
+                    throw "";
+                }
+
+                _serviceBrowser = avahi_service_browser_new(_client, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, getServiceType(), nullptr, (AvahiLookupFlags)0, AvahiDiscoverer::browseCallbackHelper, (void*)this);
+                if(_serviceBrowser == nullptr)
+                {
+                    logger->e(TAG, "{%p} avahi_service_browser_new failed('%s') - %s", (void*) this, getServiceType(), avahi_strerror(avahi_client_errno(_client)));
+                    throw "";
+                }
+
+                if(avahi_threaded_poll_start(_poller) < 0)
+                {
+                    logger->e(TAG, "{%p} avahi_threaded_poll_start failed('%s') - %s", (void*) this, getServiceType(), avahi_strerror(avahi_client_errno(_client)));
+                    throw "";
+                }
+
+                logger->d(TAG, "{%p} started for '%s'", (void*) this, getServiceType());
+            }
+            catch(...)
             {
-                logger->e(TAG, "{%p} avahi_client_new failed() - %s", (void*) this, avahi_strerror(err));
-                throw "";
+                rc = false;
+                stop();
             }
-
-            _serviceBrowser = avahi_service_browser_new(_client, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, serviceType, nullptr, (AvahiLookupFlags)0, AvahiDiscoverer::browseCallbackHelper, (void*)this);
-            if(_serviceBrowser == nullptr)
-            {
-                logger->e(TAG, "{%p} avahi_service_browser_new failed('%s') - %s", (void*) this, serviceType, avahi_strerror(avahi_client_errno(_client)));
-                throw "";
-            }
-
-            if(avahi_threaded_poll_start(_poller) < 0)
-            {
-                logger->e(TAG, "{%p} avahi_threaded_poll_start failed('%s') - %s", (void*) this, serviceType, avahi_strerror(avahi_client_errno(_client)));
-                throw "";
-            }
-
-            logger->d(TAG, "{%p} started", (void*) this);
         }
-        catch(...)
+        else
         {
-            rc = false;
-            stop();
+            rc = true;
         }
 
         return rc;

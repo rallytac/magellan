@@ -25,8 +25,11 @@ namespace Magellan
     public:
         AvahiDiscoverer();
         virtual ~AvahiDiscoverer();
+
+        // Override from ReferenceCountedObject to stop before deletion
+        virtual void deleteThis();
         
-        virtual bool start(const char *serviceType);
+        virtual bool start();
         virtual void stop();
         virtual void pause();
         virtual void resume();

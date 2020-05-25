@@ -20,14 +20,16 @@
 #include <chrono>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include "MagellanApi.h"
 
 const size_t MAX_CMD_BUFF_SIZE = 4096;
 
 void LoggingHook(int level, const char * _Nonnull tag, const char *msg);
+void DiscoveryHook(const char * _Nonnull detailJson, const void * _Nullable userData);
 void showUsage();
-void runTest1();
+void runTest1(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
@@ -40,7 +42,7 @@ int main(int argc, char **argv)
 
     magellanSetLoggingHook(&LoggingHook);
 
-    runTest1();
+    runTest1(argc, argv);
 
     return 0;
 }
@@ -137,6 +139,11 @@ void LoggingHook(int level, const char * tag, const char *msg)
     fflush(stdout);
 }
 
+void DiscoveryHook(const char * _Nonnull detailJson, const void * _Nullable userData)
+{
+    printf("DiscoveryHook: detailJson='%s'", detailJson);
+}
+
 bool readInput(char *buff, size_t maxSize)
 {
     if( !fgets(buff, maxSize, stdin) )
@@ -189,15 +196,34 @@ void commandInputLoop(const char *prompt)
     }    
 }
 
-void runTest1()
+void runTest1(int argc, char **argv)
 {
     printf("starting test1\n");
 
-    MagellanToken_t     token = NULL_MAGELLAN_TOKEN;
+    MagellanToken_t                 t;
+    std::vector<MagellanToken_t>    tokens;
 
-    magellanBeginDiscovery("", &token, (void*) 0xDEADBEEF);
+    // Add the default discoverer
+    t = MAGELLAN_NULL_TOKEN;
+    magellanBeginDiscovery(nullptr, &t, DiscoveryHook, nullptr);
+    tokens.push_back(t);
+
+    // Add additional discoverers
+    for(int x = 1; x < argc; x++)
+    {
+        t = MAGELLAN_NULL_TOKEN;
+        magellanBeginDiscovery(argv[x], &t, DiscoveryHook, nullptr);
+        tokens.push_back(t);
+    }
+    
     commandInputLoop("test1");
-    magellanEndDiscovery(token);
+
+    for(std::vector<MagellanToken_t>::iterator itr = tokens.begin();
+        itr != tokens.end();
+        itr++)
+    {
+        magellanEndDiscovery(*itr);
+    }
 
     printf("ended test1\n");
 }

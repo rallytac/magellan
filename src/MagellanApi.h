@@ -6,48 +6,13 @@
 #ifndef MAGELLANAPI_H
 #define MAGELLANAPI_H
 
-#include "MagellanApi.h"
+#include "MagellanTypes.h"
+#include "MagellanConstants.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
-
-#if defined(WIN32)
-    #ifdef MAGELLAN_EXPORTS
-        #define MAGELLAN_API  __declspec(dllexport) extern
-    #else
-        #define MAGELLAN_API  extern
-    #endif
-#else
-    #define MAGELLAN_API
-#endif
-
-#if !defined(__clang__)
-    #define _Nullable
-    #define _Nonnull
-#endif
-
-/** @addtogroup resultCodes Magellan Result Codes
- *
- * Result codes are returned by calls to the API functions and most often are related to
- * the submission of a request to Magellan rather than the outcome of that submission.
- *
- *  @{
- */
-/** @brief The request was succesful */
-static const int MAGELLAN_RESULT_OK = 0;
-/** @brief One or more parameters are invalid */
-static const int MAGELLAN_RESULT_INVALID_PARAMETERS = -1;
-/** @brief The library has not yet been initialized - magellanInitialize() should be called */
-static const int MAGELLAN_RESULT_NOT_INITIALIZED = -2;
-/** @brief The library has already been initialized */
-static const int MAGELLAN_RESULT_ALREADY_INITIALIZED = -3;
-/** @brief An unspecified error has occurred */
-static const int MAGELLAN_RESULT_GENERAL_FAILURE = -4;
-/** @} */
-
 
 /**
  * @brief [SYNC] Initializes the Magellan library.
@@ -66,7 +31,7 @@ MAGELLAN_API int magellanInitialize(const char * _Nullable configuration);
 
 
 /**
- * @brief [SYNC] Shuts down the Engine
+ * @brief [SYNC] Shuts down the Magellan library.
  *
  * Calling this function will carry out the inverse of magellanInitialize().  Typically this 
  * function is called as part of the application shutdown procedure or when a full restart of the 
@@ -82,18 +47,17 @@ MAGELLAN_API int magellanInitialize(const char * _Nullable configuration);
 */
 MAGELLAN_API int magellanShutdown();
 
-
-
-typedef void * MagellanToken_t;
-
-#define NULL_MAGELLAN_TOKEN     nullptr
-
-typedef void (* _Nullable PFN_MAGELLAN_LOGGING_HOOK)(int level, const char * _Nonnull tag, const char *msg);
-
 MAGELLAN_API int magellanSetLoggingHook(PFN_MAGELLAN_LOGGING_HOOK hookFn);
-MAGELLAN_API int magellanBeginDiscovery(const char * _Nullable configuration, MagellanToken_t *pToken, const void * _Nullable userData);
+
+MAGELLAN_API int magellanBeginDiscovery(const char * _Nullable serviceType, 
+                                        MagellanToken_t * _Nonnull pToken,
+                                        PFN_MAGELLAN_ASSET_DISCOVERY_HOOK hookFn,
+                                        const void * _Nullable userData);
+
 MAGELLAN_API int magellanEndDiscovery(MagellanToken_t token);
+
 MAGELLAN_API int magellanPauseDiscovery(MagellanToken_t token);
+
 MAGELLAN_API int magellanResumeDiscovery(MagellanToken_t token);
 
 #ifdef __cplusplus
