@@ -27,7 +27,8 @@ add_compile_options(-Wall
 set(SOURCES MagellanApi.cpp
             WorkQueue.cpp
             SimpleLogger.cpp
-            ReferenceCountedObject.cpp)
+            ReferenceCountedObject.cpp
+            AppDiscoverer.cpp)
 
 if(LINUX)
     set(SOURCES ${SOURCES} AvahiDiscoverer.cpp)

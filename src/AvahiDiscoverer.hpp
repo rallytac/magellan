@@ -35,7 +35,7 @@ namespace Magellan
         virtual void resume();
 
     private:
-        AvahiThreadedPoll          *_poller;
+        AvahiThreadedPoll           *_poller;
         AvahiClient                 *_client;
         AvahiServiceBrowser         *_serviceBrowser;
 

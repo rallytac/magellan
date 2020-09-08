@@ -6,10 +6,12 @@
 #include <mutex>
 #include <map>
 #include <string>
+#include <string.h>
 
 #include "MagellanApi.h"
 #include "WorkQueue.hpp"
 #include "SimpleLogger.hpp"
+#include "AppDiscoverer.hpp"
 #include "AvahiDiscoverer.hpp"
 
 namespace Magellan
@@ -40,7 +42,16 @@ namespace Magellan
             DiscoMap_t::iterator itr = m_discos.find(serviceType);
             if(itr == m_discos.end())
             {
-                disco = new AvahiDiscoverer();
+                
+                if(strcmp(serviceType, MAGELLAN_APP_SERVICE_TYPE) == 0 )
+                {
+
+                }
+                else
+                {
+                    disco = new AvahiDiscoverer();
+                }
+
                 disco->setServiceType(serviceType);
                 disco->setHook(hookFn);
                 disco->setUserData(userData);

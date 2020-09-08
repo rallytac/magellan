@@ -50,4 +50,7 @@ static const int MAGELLAN_LOG_LEVEL_DEBUG = 4;
 /** @brief The default Magellan service type for **/
 #define MAGELLAN_DEFAULT_SERVICE_TYPE       "_magellan._tcp"
 
+/** @brief The service type for a discoverer provided by the application **/
+#define MAGELLAN_APP_SERVICE_TYPE       "_magellan._app"
+
 #endif
