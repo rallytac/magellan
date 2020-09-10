@@ -7,6 +7,7 @@
 #define IDISCOVERER_HPP
 
 #include "MagellanTypes.h"
+#include "MagellanConstants.h"
 #include "MagellanObject.hpp"
 #include "WorkQueue.hpp"
 
@@ -22,7 +23,7 @@ namespace Magellan
         Discoverer()               
         {
             _wq = nullptr;
-            _hook = nullptr;
+            _filterHook = nullptr;
             _userData = nullptr;
         }
 
@@ -77,16 +78,16 @@ namespace Magellan
             return _wq;
         }
 
-        /** @brief Set the callback hook **/
-        inline virtual void setHook(PFN_MAGELLAN_ASSET_DISCOVERY_HOOK hook)
+        /** @brief Set the filter hook **/
+        inline virtual void setHook(PFN_MAGELLAN_DISCOVERY_FILTER_HOOK hook)
         {
-            _hook = hook;
+            _filterHook = hook;
         }
 
-        /** @brief Get the callback hook **/
-        inline virtual PFN_MAGELLAN_ASSET_DISCOVERY_HOOK getHook()
+        /** @brief Get the filter hook **/
+        inline virtual PFN_MAGELLAN_DISCOVERY_FILTER_HOOK getFilterHook()
         {
-            return _hook;
+            return _filterHook;
         }
 
         /** @brief Set the user data **/
@@ -102,11 +103,15 @@ namespace Magellan
         }
 
         /** @brief Call the hook **/
-        virtual void callHook(const char *detailJson)
+        virtual int callFilterHook(const char *detailJson)
         {
-            if(_hook != nullptr)
+            if(_filterHook != nullptr)
             {
-                _hook(detailJson, _userData);
+                return _filterHook(detailJson, _userData);
+            }
+            else
+            {
+                return MAGELLAN_FILTER_PROCEED;
             }
         }
 
@@ -123,8 +128,8 @@ namespace Magellan
         /** @brief User data **/
         const void                          *_userData;
 
-        /** @brief callback hook **/
-        PFN_MAGELLAN_ASSET_DISCOVERY_HOOK   _hook;
+        /** @brief fiter hook **/
+        PFN_MAGELLAN_DISCOVERY_FILTER_HOOK  _filterHook;
     };
 }
 

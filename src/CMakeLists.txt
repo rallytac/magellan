@@ -19,12 +19,15 @@ add_compile_options(-Wall
                     -Wno-strict-aliasing
                     -Wno-unused-value
                     -fvisibility=hidden
-                    -O0 -ggdb -pedantic)
+                    -O0 
+                    -ggdb 
+                    -pedantic)
 
 #------------------------------------------------
 # magellan-static library
 #------------------------------------------------
-set(SOURCES MagellanApi.cpp
+set(SOURCES MagellanCore.cpp
+            MagellanApi.cpp
             WorkQueue.cpp
             SimpleLogger.cpp
             ReferenceCountedObject.cpp
@@ -36,12 +39,17 @@ endif()
 
 add_library(magellan-static STATIC ${SOURCES})
 
+target_include_directories(magellan-static PRIVATE ./)
+
+target_precompile_headers(magellan-static PUBLIC MagellanJson.hpp)
 
 #------------------------------------------------
 # mth executable
 #------------------------------------------------
 add_executable(mth mth.cpp)
 
+target_include_directories(mth PRIVATE ./)
+
 if(LINUX)
-    target_link_libraries(mth PRIVATE magellan-static avahi-client avahi-common pthread)
+    target_link_libraries(mth PRIVATE magellan-static avahi-client avahi-common pthread curl)
 endif()

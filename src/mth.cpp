@@ -28,7 +28,7 @@ const size_t MAX_CMD_BUFF_SIZE = 4096;
 const char *LOG_TAG = "mth";
 
 void LoggingHook(int level, const char * _Nonnull tag, const char *msg);
-void DiscoveryHook(const char * _Nonnull detailJson, const void * _Nullable userData);
+int DiscoveryFilterHook(const char * _Nonnull detailJson, const void * _Nullable userData);
 void showUsage();
 void runTest1(int argc, char **argv);
 
@@ -43,7 +43,11 @@ int main(int argc, char **argv)
 
     magellanSetLoggingHook(&LoggingHook);
 
+    magellanInitialize("");
+
     runTest1(argc, argv);
+
+    magellanShutdown();
 
     return 0;
 }
@@ -140,9 +144,12 @@ void LoggingHook(int level, const char * tag, const char *msg)
     fflush(stdout);
 }
 
-void DiscoveryHook(const char * _Nonnull detailJson, const void * _Nullable userData)
+int DiscoveryHook(const char * _Nonnull detailJson, const void * _Nullable userData)
 {
     magellanLogMessage(MAGELLAN_LOG_LEVEL_INFORMATIONAL, LOG_TAG, detailJson);
+
+    // We will always proceed
+    return MAGELLAN_FILTER_PROCEED;
 }
 
 bool readInput(char *buff, size_t maxSize)

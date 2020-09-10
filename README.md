@@ -41,9 +41,8 @@ Key high-level elements and requirements for Magellan are as follows:
 # Development Tools
 Tools and platforms used in the development and testing of the Magellan software includes the
 following:
-- Apple macOS Mojave
-- Ubuntu Linux 18.10
-- Visual Studio Code (cross-platform on Mac, Windows, and Linux)
+- Ubuntu Linux 19.10
+- Visual Studio Code
 - C++11 compliant GCC or CLang variant
   - all warnings enabled and warnings treated as errors by the compiler
   - Google Address Sanitization library (wherever possible)

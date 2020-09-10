@@ -27,7 +27,7 @@ typedef void * MagellanToken_t;
 /** @brief Prototype for the logging callback hook **/
 typedef void (* _Nullable PFN_MAGELLAN_LOGGING_HOOK)(int level, const char * _Nonnull tag, const char *msg);
 
-/** @brief Prototype for the asset discovery **/
-typedef void (* _Nullable PFN_MAGELLAN_ASSET_DISCOVERY_HOOK)(const char * _Nonnull detailJson, const void * _Nullable userData);
+/** @brief Prototype for the asset discovery filter hook **/
+typedef int (* _Nullable PFN_MAGELLAN_DISCOVERY_FILTER_HOOK)(const char * _Nonnull detailJson, const void * _Nullable userData);
 
 #endif

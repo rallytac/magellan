@@ -53,4 +53,17 @@ static const int MAGELLAN_LOG_LEVEL_DEBUG = 4;
 /** @brief The service type for a discoverer provided by the application **/
 #define MAGELLAN_APP_SERVICE_TYPE       "_magellan._app"
 
+/** @addtogroup discoveryFilterCodes Magellan Discovery Filter Codes
+ *
+ * Values returned by the discovery filter callback hook to indicate whether to proceed with
+ * normal actions regarding asset discovery/rediscovery/undiscovery.
+ *
+ *  @{
+ */
+/** @brief Ignore the event */
+static const int MAGELLAN_FILTER_IGNORE = 0;
+/** @brief Processing should continue */
+static const int MAGELLAN_FILTER_PROCEED = 1;
+/** @} */
+
 #endif
