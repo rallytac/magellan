@@ -80,6 +80,11 @@ MAGELLAN_API int magellanPauseDiscovery(MagellanToken_t token);
 
 MAGELLAN_API int magellanResumeDiscovery(MagellanToken_t token);
 
+MAGELLAN_API void magellanSetTalkgroupCallbacks(PFN_MAGELLAN_ON_NEW_TALKGROUPS pfnOnNewTalkgroups,
+                            PFN_MAGELLAN_ON_MODIFIED_TALKGROUPS pfnOnModifiedTalkgroups,
+                            PFN_MAGELLAN_ON_REMOVED_TALKGROUPS pfnOnRemovedTalkgroups,
+                            const void *userData);
+
 #ifdef __cplusplus
 }
 #endif

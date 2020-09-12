@@ -27,8 +27,14 @@
 const size_t MAX_CMD_BUFF_SIZE = 4096;
 const char *LOG_TAG = "mth";
 
-void LoggingHook(int level, const char * _Nonnull tag, const char *msg);
-int DiscoveryFilterHook(const char * _Nonnull detailJson, const void * _Nullable userData);
+void loggingHook(int level, const char * _Nonnull tag, const char *msg);
+int discoveryFilterHook(const char * _Nonnull detailJson, const void * _Nullable userData);
+
+void onNewTalkgroups(const char * _Nonnull newTalkgroupsJson, const void * _Nullable userData);
+void onModifiedTalkgroups(const char * _Nonnull modifiedTalkgroupsJson, const void * _Nullable userData);
+void onRemovedTalkgroups(const char * _Nonnull removedTalkgroupsJson, const void * _Nullable userData);
+
+
 void showUsage();
 void runTest1(int argc, char **argv);
 
@@ -41,9 +47,10 @@ int main(int argc, char **argv)
     printf("Build time: %s @ %s\n", __DATE__, __TIME__);
     printf("---------------------------------------------------------------------------\n");
 
-    magellanSetLoggingHook(&LoggingHook);
+    magellanSetLoggingHook(&loggingHook);
 
     magellanInitialize("");
+    magellanSetTalkgroupCallbacks(onNewTalkgroups, onModifiedTalkgroups, onRemovedTalkgroups, nullptr);
 
     runTest1(argc, argv);
 
@@ -56,7 +63,7 @@ void showUsage()
 {
 }
 
-void LoggingHook(int level, const char * tag, const char *msg)
+void loggingHook(int level, const char * tag, const char *msg)
 {
     static const char *COLOR_ERROR = "\033[31;1m";
     static const char *COLOR_DEBUG = "\033[37m";
@@ -150,6 +157,21 @@ int DiscoveryHook(const char * _Nonnull detailJson, const void * _Nullable userD
 
     // We will always proceed
     return MAGELLAN_FILTER_PROCEED;
+}
+
+void onNewTalkgroups(const char * _Nonnull newTalkgroupsJson, const void * _Nullable userData)
+{    
+    magellanLogMessage(MAGELLAN_LOG_LEVEL_INFORMATIONAL, LOG_TAG, newTalkgroupsJson);
+}
+
+void onModifiedTalkgroups(const char * _Nonnull modifiedTalkgroupsJson, const void * _Nullable userData)
+{
+    magellanLogMessage(MAGELLAN_LOG_LEVEL_INFORMATIONAL, LOG_TAG, modifiedTalkgroupsJson);
+}
+
+void onRemovedTalkgroups(const char * _Nonnull removedTalkgroupsJson, const void * _Nullable userData)
+{
+    magellanLogMessage(MAGELLAN_LOG_LEVEL_INFORMATIONAL, LOG_TAG, removedTalkgroupsJson);
 }
 
 bool readInput(char *buff, size_t maxSize)

@@ -30,4 +30,13 @@ typedef void (* _Nullable PFN_MAGELLAN_LOGGING_HOOK)(int level, const char * _No
 /** @brief Prototype for the asset discovery filter hook **/
 typedef int (* _Nullable PFN_MAGELLAN_DISCOVERY_FILTER_HOOK)(const char * _Nonnull detailJson, const void * _Nullable userData);
 
+/** @brief Prototype for notification of newly discovered talkgroups **/
+typedef void (* _Nullable PFN_MAGELLAN_ON_NEW_TALKGROUPS)(const char * _Nonnull newTalkgroupsJson, const void * _Nullable userData);
+
+/** @brief Prototype for notification of modified talkgroups **/
+typedef void (* _Nullable PFN_MAGELLAN_ON_MODIFIED_TALKGROUPS)(const char * _Nonnull modifiedTalkgroupsJson, const void * _Nullable userData);
+
+/** @brief Prototype for notification of removed talkgroups **/
+typedef void (* _Nullable PFN_MAGELLAN_ON_REMOVED_TALKGROUPS)(const char * _Nonnull removedTalkgroupsJson, const void * _Nullable userData);
+
 #endif

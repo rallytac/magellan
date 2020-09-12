@@ -21,7 +21,9 @@ add_compile_options(-Wall
                     -fvisibility=hidden
                     -O0 
                     -ggdb 
-                    -pedantic)
+                    -pedantic
+                    -fsanitize=address
+                    -fno-omit-frame-pointer)
 
 #------------------------------------------------
 # magellan-static library
@@ -31,7 +33,8 @@ set(SOURCES MagellanCore.cpp
             WorkQueue.cpp
             SimpleLogger.cpp
             ReferenceCountedObject.cpp
-            AppDiscoverer.cpp)
+            AppDiscoverer.cpp
+            TimerManager.cpp)
 
 if(LINUX)
     set(SOURCES ${SOURCES} AvahiDiscoverer.cpp)
@@ -51,5 +54,5 @@ add_executable(mth mth.cpp)
 target_include_directories(mth PRIVATE ./)
 
 if(LINUX)
-    target_link_libraries(mth PRIVATE magellan-static avahi-client avahi-common pthread curl)
+    target_link_libraries(mth PRIVATE asan magellan-static avahi-client avahi-common pthread curl)
 endif()

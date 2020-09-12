@@ -74,3 +74,14 @@ MAGELLAN_API int magellanResumeDiscovery(MagellanToken_t token)
 {
     return Magellan::Core::resumeDiscovery(token);
 }
+
+MAGELLAN_API void magellanSetTalkgroupCallbacks(PFN_MAGELLAN_ON_NEW_TALKGROUPS pfnOnNewTalkgroups,
+                            PFN_MAGELLAN_ON_MODIFIED_TALKGROUPS pfnOnModifiedTalkgroups,
+                            PFN_MAGELLAN_ON_REMOVED_TALKGROUPS pfnOnRemovedTalkgroups,
+                            const void *userData)
+{
+    Magellan::Core::setTalkgroupCallbacks(pfnOnNewTalkgroups,
+                                          pfnOnModifiedTalkgroups,
+                                          pfnOnRemovedTalkgroups,
+                                          userData);
+}

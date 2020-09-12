@@ -216,6 +216,12 @@ namespace Magellan
             address.clear();
             port = 0;
         }
+
+        bool matches(NetworkAddress& other)
+        {
+            return ( address.compare(other.address) == 0 &&
+                     port == other.port );
+        }
     };
 
     static void to_json(nlohmann::json& j, const NetworkAddress& p)
@@ -421,6 +427,13 @@ namespace Magellan
             format = 1;
             intervalSecs = 30;
         }
+
+        bool matches(Presence& other)
+        {
+            return (forceOnAudioTransmit == other.forceOnAudioTransmit &&
+                    format == other.format &&
+                    intervalSecs == other.intervalSecs);
+        }
     };
 
     static void to_json(nlohmann::json& j, const Presence& p)
@@ -513,6 +526,19 @@ namespace Magellan
             initialHeaderBurst = 5;
             trailingHeaderBurst = 5;
         }
+
+        bool matches(TxAudio& other)
+        {
+            return ( encoder.compare(other.encoder) == 0 &&
+                     fdx == other.fdx &&
+                     maxTxSecs == other.maxTxSecs &&
+                     framingMs == other.framingMs &&
+                     noHdrExt == other.noHdrExt &&
+                     extensionSendInterval == other.extensionSendInterval &&
+                     initialHeaderBurst == other.initialHeaderBurst &&
+                     trailingHeaderBurst == other.trailingHeaderBurst
+                   );
+        }
     };
 
     static void to_json(nlohmann::json& j, const TxAudio& p)
@@ -579,6 +605,13 @@ namespace Magellan
             priority = 4;
             ttl = 1;
         }
+
+        bool matches(NetworkOptions& other)
+        {
+            return ( priority == other.priority &&
+                     ttl == other.ttl
+                   );
+        }
     };
 
     static void to_json(nlohmann::json& j, const NetworkOptions& p)
@@ -633,6 +666,13 @@ namespace Magellan
             minLevel = 0;
             maxLevel = 0;
         }
+
+        bool matches(TalkgroupSecurity& other)
+        {
+            return ( minLevel == other.minLevel &&
+                     maxLevel == other.maxLevel
+                   );
+        }
     };
 
     static void to_json(nlohmann::json& j, const TalkgroupSecurity& p)
@@ -679,6 +719,11 @@ namespace Magellan
         void clear()
         {
             host.clear();
+        }
+
+        bool matches(Rallypoint& other)
+        {
+            return ( host.matches(other.host) );
         }
     };
 
@@ -785,6 +830,38 @@ namespace Magellan
             txAudio.clear();
             networkOptions.clear();
             security.clear();
+        }
+
+        bool matches(Talkgroup& other)
+        {
+            if( id.compare(other.id) == 0 &&
+                type == other.type &&
+                name.compare(other.name) == 0 &&
+                cryptoPassword.compare(other.cryptoPassword) == 0 &&
+                presence.matches(other.presence) &&
+                rx.matches(other.rx) &&
+                tx.matches(other.tx) &&
+                txAudio.matches(other.txAudio) &&
+                networkOptions.matches(other.networkOptions) &&
+                security.matches(other.security)                
+               )
+            {
+                // Looks good so far, now check out the rallypoint array
+                if(rallypoints.size() == other.rallypoints.size())
+                {
+                    for(size_t x = 0; x < rallypoints.size(); x++)
+                    {
+                        if(!rallypoints[x].matches(other.rallypoints[x]))
+                        {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
         }
     };
 

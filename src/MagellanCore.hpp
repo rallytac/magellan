@@ -29,6 +29,11 @@ namespace Magellan
 
         void processDiscoveredDevice(DiscoveredDevice *dd);
         void processUndiscoveredDevice(const char *discovererKey);
+
+        void setTalkgroupCallbacks(PFN_MAGELLAN_ON_NEW_TALKGROUPS pfnOnNewTalkgroups,
+                                   PFN_MAGELLAN_ON_MODIFIED_TALKGROUPS pfnOnModifiedTalkgroups,
+                                   PFN_MAGELLAN_ON_REMOVED_TALKGROUPS pfnOnRemovedTalkgroups,
+                                   const void *userData);
     }
 }
 #endif
