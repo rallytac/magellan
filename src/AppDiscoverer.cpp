@@ -13,13 +13,11 @@ namespace Magellan
 
     AppDiscoverer::AppDiscoverer()
     {
-        logger->i(TAG, "{%p} ctor()", (void*) this);
         setImplementation("Application");
     }
 
     AppDiscoverer::~AppDiscoverer()
     {
-        logger->i(TAG, "{%p} ~dtor()", (void*) this);
     }
 
     bool AppDiscoverer::start()

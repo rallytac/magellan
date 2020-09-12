@@ -16,8 +16,7 @@ namespace Magellan
 
     AvahiDiscoverer::AvahiDiscoverer()
     {
-        Magellan::Core::getLogger()->i(TAG, "{%p} ctor()", (void*) this);
-        setImplementation("Avahi Linux");
+        setImplementation("Avahi-Linux");
         _poller = nullptr;
         _client = nullptr;
         _serviceBrowser = nullptr;
@@ -25,7 +24,6 @@ namespace Magellan
 
     AvahiDiscoverer::~AvahiDiscoverer()
     {
-        Magellan::Core::getLogger()->i(TAG, "{%p} ~dtor()", (void*) this);
     }
 
     void AvahiDiscoverer::deleteThis()
