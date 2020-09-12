@@ -1,0 +1,51 @@
+{
+	"version": 666,
+	"dateTimeStamp": "2020-04-15T17:32:28Z",
+	"thingInfo": {
+	  "id": "{e15b1b69-5117-4a7c-9399-345069945198}",
+	  "type": "Radio Gateway",
+	  "manufacturer": "Evil LMR",
+	  "capabilities": [
+		"voice"
+	  ]
+	},
+	"talkgroups": [
+	  {
+		"type": 1,
+		"id": "{d7107580-952d-4fd4-a4c2-a01f4067fd39}",
+		"name": "Highway To Hell",
+		"cryptoPassword": "AABBCCDDEEFF",
+		"presence": {
+		  "forceOnAudioTransmit": false,
+		  "format": 1,
+		  "intervalSecs": 30
+		},
+		"rx": {
+		  "address": "239.1.1.1",
+		  "port": 18000
+		},
+		"tx": {
+		  "address": "239.1.1.1",
+		  "port": 18000
+		},
+		"txAudio": {
+		  "encoder": "ctOpus8000",
+		  "extensionSendInterval": 10,
+		  "fdx": false,
+		  "framingMs": 60,
+		  "initialHeaderBurst": 5,
+		  "maxTxSecs": 30,
+		  "noHdrExt": false,
+		  "trailingHeaderBurst": 5
+		},
+		"networkOptions": {
+		  "priority": 4,
+		  "ttl": 128
+		},
+		"security": {
+		  "minLevel": 0,
+		  "maxLevel": 0
+		}
+	  }
+	]
+  }
