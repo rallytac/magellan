@@ -34,7 +34,6 @@ void onNewTalkgroups(const char * _Nonnull newTalkgroupsJson, const void * _Null
 void onModifiedTalkgroups(const char * _Nonnull modifiedTalkgroupsJson, const void * _Nullable userData);
 void onRemovedTalkgroups(const char * _Nonnull removedTalkgroupsJson, const void * _Nullable userData);
 
-
 void showUsage();
 void runTest1(int argc, char **argv);
 
@@ -49,7 +48,17 @@ int main(int argc, char **argv)
 
     magellanSetLoggingHook(&loggingHook);
 
-    magellanInitialize("");
+    std::string configJson;
+
+    configJson.append("{");
+        configJson.append("\"houseKeeperIntervalMs\":5000,");
+        configJson.append("\"urlCheckerIntervalMs\":2500,");
+        configJson.append("\"urlRetryIntervalMs\":5000,");
+        configJson.append("\"maxUrlConsecutiveErrors\":50,");
+        configJson.append("\"abandonUrlsAfterConsecutiveErrors\":false");
+    configJson.append("}");
+
+    magellanInitialize(configJson.c_str());
     magellanSetTalkgroupCallbacks(onNewTalkgroups, onModifiedTalkgroups, onRemovedTalkgroups, nullptr);
 
     runTest1(argc, argv);

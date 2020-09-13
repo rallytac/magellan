@@ -54,5 +54,5 @@ add_executable(mth mth.cpp)
 target_include_directories(mth PRIVATE ./)
 
 if(LINUX)
-    target_link_libraries(mth PRIVATE asan magellan-static avahi-client avahi-common pthread curl)
+    target_link_libraries(mth PRIVATE asan magellan-static avahi-client avahi-common pthread curl ssl crypto)
 endif()

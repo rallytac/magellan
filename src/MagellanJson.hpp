@@ -180,6 +180,81 @@ namespace Magellan
     };    
 
 
+    //-----------------------------------------------------------
+    JSON_SERIALIZED_CLASS(MagellanConfiguration)
+    /**
+    * @brief Helper class for serializing and deserializing the MagellanConfiguration JSON
+    *
+    * Helper C++ class to serialize and de-serialize MagellanConfiguration JSON
+    *
+    * Example: @include[doc] examples/MagellanConfiguration.json
+    */
+    class MagellanConfiguration : public JsonObjectBase
+    {
+        IMPLEMENT_JSON_SERIALIZATION()
+        IMPLEMENT_JSON_DOCUMENTATION(MagellanConfiguration)
+
+    public:
+        /**
+         * @brief Milliseconds between housekeeper checks
+         */
+        unsigned long               houseKeeperIntervalMs;
+
+        /**
+         * @brief Milliseconds between URL status checks
+         */
+        unsigned long               urlCheckerIntervalMs;
+
+        /**
+         * @brief Milliseconds between URL retries
+         */
+        unsigned long               urlRetryIntervalMs;
+
+        /**
+         * @brief Ceiling of URL consecutive errors
+         */
+        unsigned long               maxUrlConsecutiveErrors;
+
+        /**
+         * @brief Abandon URL retries when maxUrlConsecutiveErrors is reached
+         */
+        bool                        abandonUrlsAfterConsecutiveErrors;
+
+        MagellanConfiguration()
+        {
+            clear();
+        }
+
+        void clear()
+        {
+            houseKeeperIntervalMs = 5000;
+            urlCheckerIntervalMs = 2500;
+            urlRetryIntervalMs = 5000;
+            maxUrlConsecutiveErrors = 50;
+            abandonUrlsAfterConsecutiveErrors = false;
+        }
+    };
+
+    static void to_json(nlohmann::json& j, const MagellanConfiguration& p)
+    {
+        j = nlohmann::json{
+            TOJSON_IMPL(houseKeeperIntervalMs),
+            TOJSON_IMPL(urlCheckerIntervalMs),
+            TOJSON_IMPL(urlRetryIntervalMs),
+            TOJSON_IMPL(maxUrlConsecutiveErrors),
+            TOJSON_IMPL(abandonUrlsAfterConsecutiveErrors)
+        };
+    }
+
+    static void from_json(const nlohmann::json& j, MagellanConfiguration& p)
+    {
+        p.clear();
+        FROMJSON_IMPL(houseKeeperIntervalMs, unsigned long, 5000);
+        FROMJSON_IMPL(urlCheckerIntervalMs, unsigned long, 2500);
+        FROMJSON_IMPL(urlRetryIntervalMs, unsigned long, 5000);
+        FROMJSON_IMPL(maxUrlConsecutiveErrors, unsigned long, 50);
+        FROMJSON_IMPL(abandonUrlsAfterConsecutiveErrors, bool, false);
+    }
 
     //-----------------------------------------------------------
     JSON_SERIALIZED_CLASS(NetworkAddress)

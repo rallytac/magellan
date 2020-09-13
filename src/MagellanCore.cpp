@@ -17,6 +17,8 @@
 #include "AppDiscoverer.hpp"
 #include "AvahiDiscoverer.hpp"
 
+#include <openssl/ssl.h>
+
 namespace Magellan
 {
     namespace Core
@@ -47,7 +49,7 @@ namespace Magellan
                 ProcessingState_t       _ps;
                 DeviceConfiguration     _cfg;
                 uint64_t                _nextCheckTs;
-                uint64_t                _consecutiveErrors;
+                unsigned long           _consecutiveErrors;
         };
 
         typedef std::map<std::string, Discoverer*> DiscoMap_t;
@@ -55,11 +57,6 @@ namespace Magellan
 
         static const char *TAG = "MagellanCore";
 
-        static const uint64_t HOUSEKEEPER_INTERVAL_MS = 5000;
-        static const uint64_t URLCHECKER_INTERVAL_MS = 2500;
-        static const uint64_t URL_RETRY_INTERVAL_MS = 5000;
-        static const uint64_t MAX_CONSECUTIVE_PROCESSING_ERRORS = 50;
-        
         static WorkQueue                                m_mainWorkQueue;
         static WorkQueue                                m_downloadWorkQueue;
         static std::atomic<bool>                        m_initialized(false);
@@ -76,6 +73,8 @@ namespace Magellan
 
         static uint64_t                                 m_tmrHouseKeeper = 0;
         static uint64_t                                 m_tmrUrlChecker = 0;
+
+        static MagellanConfiguration                    m_configuration;
 
         void doUrlDownload(const char *url, const char *discovererKey);
 
@@ -99,12 +98,12 @@ namespace Magellan
 
         void performHousekeeping()
         {
-            getLogger()->d(TAG, "performHousekeeping");
+            //getLogger()->d(TAG, "performHousekeeping");
         }
 
         void performUrlChecking()
         {
-            getLogger()->d(TAG, "performUrlChecking");
+            //getLogger()->d(TAG, "performUrlChecking");
 
             uint64_t now = getNowMs();
 
@@ -151,6 +150,17 @@ namespace Magellan
             return true;
         }
 
+        void initCrypto()
+        {
+            SSL_library_init();
+            OpenSSL_add_all_algorithms();
+            SSL_load_error_strings();
+        }
+
+        void deinitCrypto()
+        {
+        }
+
         int initialize(const char *configuration)
         {
             int rc = MAGELLAN_RESULT_OK;
@@ -160,16 +170,28 @@ namespace Magellan
                 return rc;
             }
 
-            m_initialized = true;
             getLogger()->d(TAG, "magellanInitialize %s", (configuration == nullptr ? "" : configuration));
+
+            if(configuration != nullptr && configuration[0] != 0)
+            {
+                if(!m_configuration.deserialize(configuration))
+                {
+                    getLogger()->e(TAG, "failed to parse initialization json %s", configuration);
+                    return MAGELLAN_RESULT_INVALID_PARAMETERS;
+                }
+            }
+
+            m_initialized = true;
+
+            initCrypto();
 
             m_mainWorkQueue.start();
             m_downloadWorkQueue.start();
             m_timerManager.start();
             curl_global_init(CURL_GLOBAL_ALL);
 
-            m_tmrHouseKeeper = m_timerManager.setTimer(tmrCbHouseKeeper, nullptr, HOUSEKEEPER_INTERVAL_MS, true);
-            m_tmrUrlChecker = m_timerManager.setTimer(tmrCbUrlChecker, nullptr, URLCHECKER_INTERVAL_MS, true);
+            m_tmrHouseKeeper = m_timerManager.setTimer(tmrCbHouseKeeper, nullptr, m_configuration.houseKeeperIntervalMs, true);
+            m_tmrUrlChecker = m_timerManager.setTimer(tmrCbUrlChecker, nullptr, m_configuration.urlCheckerIntervalMs, true);
 
             return rc;
         }
@@ -196,6 +218,8 @@ namespace Magellan
             curl_global_cleanup();
             m_downloadWorkQueue.stop();
             m_mainWorkQueue.stop();
+
+            deinitCrypto();
 
             m_initialized = false;
             
@@ -243,22 +267,30 @@ namespace Magellan
             {
                 dt->_consecutiveErrors++;
 
-                if(dt->_consecutiveErrors >= MAX_CONSECUTIVE_PROCESSING_ERRORS)
+                if(dt->_consecutiveErrors >= m_configuration.maxUrlConsecutiveErrors)
                 {
-                    getLogger()->e(TAG, "too many consecutive errors on %s - abandoning", discovererKey);
-                    notifyOfLostDevice(dt);
-                    m_devices.erase(discovererKey);
-                }
-                else
-                {
-                    uint64_t now = getNowMs();
-                    uint64_t rndAmount = (rand() % (dt->_consecutiveErrors * URL_RETRY_INTERVAL_MS));
+                    if(m_configuration.abandonUrlsAfterConsecutiveErrors)
+                    {
+                        getLogger()->e(TAG, "too many consecutive errors on %s - abandoning", discovererKey);
+                        notifyOfLostDevice(dt);
+                        m_devices.erase(discovererKey);
 
-                    dt->_nextCheckTs = ((now + URL_RETRY_INTERVAL_MS) + rndAmount);
-                    dt->_ps = DeviceTracker::psRequired;
-                    getLogger()->e(TAG, "scheduled next check of %s in %" PRIu64 " milliseconds", discovererKey, (dt->_nextCheckTs - now));
+                        // NOTE: Early return here
+                        return;
+                    }
+
+                    // Stay at ceiling
+                    dt->_consecutiveErrors = m_configuration.maxUrlConsecutiveErrors;
                 }
+
+                uint64_t now = getNowMs();
+                uint64_t rndAmount = (rand() % (dt->_consecutiveErrors * m_configuration.urlRetryIntervalMs));
+
+                dt->_nextCheckTs = ((now + (dt->_consecutiveErrors * 1000)) + rndAmount);
+                dt->_ps = DeviceTracker::psRequired;
+                getLogger()->e(TAG, "scheduled next check of %s in %" PRIu64 " milliseconds", discovererKey, (dt->_nextCheckTs - now));
                 
+                // NOTE: Early return here
                 return;
             }
 
