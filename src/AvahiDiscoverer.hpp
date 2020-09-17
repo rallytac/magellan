@@ -29,12 +29,14 @@ namespace Magellan
         // Override from ReferenceCountedObject to stop before deletion
         virtual void deleteThis();
         
+        virtual bool configure(DataModel::JsonObjectBase& configuration);
         virtual bool start();
         virtual void stop();
         virtual void pause();
         virtual void resume();
 
     private:
+        DataModel::Mdns             _configuration;
         AvahiThreadedPoll           *_poller;
         AvahiClient                 *_client;
         AvahiServiceBrowser         *_serviceBrowser;

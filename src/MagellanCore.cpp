@@ -11,11 +11,12 @@
 #include <curl/curl.h>
 
 #include "MagellanCore.hpp"
-#include "MagellanJson.hpp"
+#include "MagellanDataModel.hpp"
 #include "WorkQueue.hpp"
 #include "TimerManager.hpp"
 #include "AppDiscoverer.hpp"
 #include "AvahiDiscoverer.hpp"
+#include "SsdpDiscoverer.hpp"
 
 #include <openssl/ssl.h>
 
@@ -28,14 +29,15 @@ namespace Magellan
             public:
                 typedef enum
                 {
-                    psRequired,
+                    psNone,
+                    psPending,
                     psInProgress,
                     psComplete
                 } ProcessingState_t;
 
                 DeviceTracker()
                 {          
-                    _ps = psRequired;
+                    _ps = psNone;
                     _nextCheckTs = 0;
                     _consecutiveErrors = 0;
                 }
@@ -46,13 +48,12 @@ namespace Magellan
 
                 std::string             _key;
                 std::string             _url;
-                ProcessingState_t       _ps;
-                DeviceConfiguration     _cfg;
-                uint64_t                _nextCheckTs;
-                unsigned long           _consecutiveErrors;
+                ProcessingState_t                     _ps;
+                DataModel::DeviceConfiguration        _cfg;
+                uint64_t                              _nextCheckTs;
+                unsigned long                         _consecutiveErrors;
         };
 
-        typedef std::map<std::string, Discoverer*> DiscoMap_t;
         typedef std::map<std::string, DeviceTracker> DeviceMap_t;
 
         static const char *TAG = "MagellanCore";
@@ -61,7 +62,6 @@ namespace Magellan
         static WorkQueue                                m_downloadWorkQueue;
         static std::atomic<bool>                        m_initialized(false);
         static SimpleLogger                             m_simpleLogger;
-        static DiscoMap_t                               m_discos;
         static DeviceMap_t                              m_devices;
         static TimerManager                             m_timerManager;
 
@@ -74,7 +74,7 @@ namespace Magellan
         static uint64_t                                 m_tmrHouseKeeper = 0;
         static uint64_t                                 m_tmrUrlChecker = 0;
 
-        static MagellanConfiguration                    m_configuration;
+        static DataModel::MagellanConfiguration         m_configuration;
 
         void doUrlDownload(const char *url, const char *discovererKey);
 
@@ -112,7 +112,7 @@ namespace Magellan
                 itr++)
             {
                 DeviceTracker *dt = &itr->second;
-                if(dt->_ps == DeviceTracker::psRequired)
+                if(dt->_ps == DeviceTracker::psPending)
                 {
                     if(dt->_nextCheckTs > 0 && dt->_nextCheckTs <= now)
                     {
@@ -183,6 +183,8 @@ namespace Magellan
 
             m_initialized = true;
 
+            getLogger()->d(TAG, "configured with:\n%s", m_configuration.serialize(3).c_str());
+
             initCrypto();
 
             m_mainWorkQueue.start();
@@ -226,9 +228,9 @@ namespace Magellan
             return rc;
         }
 
-        Talkgroup *getTalkgroup(const char *id, std::vector<Talkgroup>& v)
+        DataModel::Talkgroup *getTalkgroup(const char *id, std::vector<DataModel::Talkgroup>& v)
         {
-            for(std::vector<Talkgroup>::iterator itrSearch = v.begin();
+            for(std::vector<DataModel::Talkgroup>::iterator itrSearch = v.begin();
                 itrSearch != v.end();
                 itrSearch++)
             {
@@ -247,7 +249,7 @@ namespace Magellan
             {
                 nlohmann::json idArray = nlohmann::json::array();
 
-                for( std::vector<Talkgroup>::iterator itrTg = dt->_cfg.talkgroups.begin();
+                for( std::vector<DataModel::Talkgroup>::iterator itrTg = dt->_cfg.talkgroups.begin();
                     itrTg != dt->_cfg.talkgroups.end();
                     itrTg++)
                 {
@@ -260,7 +262,7 @@ namespace Magellan
         }
 
 
-        void processDeviceConfiguration(const char *discovererKey, DeviceTracker *dt, DeviceConfiguration *dc, bool encounteredError)
+        void processDeviceConfiguration(const char *discovererKey, DeviceTracker *dt, DataModel::DeviceConfiguration *dc, bool encounteredError)
         {
             // Did we encounter an error?
             if(encounteredError)
@@ -287,7 +289,7 @@ namespace Magellan
                 uint64_t rndAmount = (rand() % (dt->_consecutiveErrors * m_configuration.urlRetryIntervalMs));
 
                 dt->_nextCheckTs = ((now + (dt->_consecutiveErrors * 1000)) + rndAmount);
-                dt->_ps = DeviceTracker::psRequired;
+                dt->_ps = DeviceTracker::psPending;
                 getLogger()->e(TAG, "scheduled next check of %s in %" PRIu64 " milliseconds", discovererKey, (dt->_nextCheckTs - now));
                 
                 // NOTE: Early return here
@@ -304,11 +306,11 @@ namespace Magellan
             std::vector<std::string>     removedTalkGroups;
 
             // Look for new or modified
-            for(std::vector<Talkgroup>::iterator itrIncoming = dc->talkgroups.begin();
+            for(std::vector<DataModel::Talkgroup>::iterator itrIncoming = dc->talkgroups.begin();
                 itrIncoming != dc->talkgroups.end();
                 itrIncoming++)
             {
-                Talkgroup *tg = getTalkgroup(itrIncoming->id.c_str(), dt->_cfg.talkgroups);
+                DataModel::Talkgroup *tg = getTalkgroup(itrIncoming->id.c_str(), dt->_cfg.talkgroups);
                 if(tg != nullptr)
                 {
                     if(!itrIncoming->matches(*tg))
@@ -323,11 +325,11 @@ namespace Magellan
             }
 
             // Look for removed
-            for(std::vector<Talkgroup>::iterator itrExisting = dt->_cfg.talkgroups.begin();
+            for(std::vector<DataModel::Talkgroup>::iterator itrExisting = dt->_cfg.talkgroups.begin();
                 itrExisting != dt->_cfg.talkgroups.end();
                 itrExisting++)
             {
-                Talkgroup *tg = getTalkgroup(itrExisting->id.c_str(), dc->talkgroups);
+                DataModel::Talkgroup *tg = getTalkgroup(itrExisting->id.c_str(), dc->talkgroups);
                 if(tg == nullptr)
                 {
                     removedTalkGroups.push_back(itrExisting->id);
@@ -343,7 +345,7 @@ namespace Magellan
                     itrNotify != removedTalkGroups.end();
                     itrNotify++)
                 {
-                    Talkgroup *tg = getTalkgroup(itrNotify->c_str(), dt->_cfg.talkgroups);
+                    DataModel::Talkgroup *tg = getTalkgroup(itrNotify->c_str(), dt->_cfg.talkgroups);
                     if(tg != nullptr)
                     {
                         getLogger()->d(TAG, "notify of removed tg '%s'", itrNotify->c_str());
@@ -368,7 +370,7 @@ namespace Magellan
                     itrNotify != modifiedTalkGroups.end();
                     itrNotify++)
                 {
-                    Talkgroup *tg = getTalkgroup(itrNotify->c_str(), dc->talkgroups);
+                    DataModel::Talkgroup *tg = getTalkgroup(itrNotify->c_str(), dc->talkgroups);
                     if(tg != nullptr)
                     {
                         getLogger()->d(TAG, "notify of modified tg '%s'", itrNotify->c_str());
@@ -393,7 +395,7 @@ namespace Magellan
                     itrNotify != newTalkGroups.end();
                     itrNotify++)
                 {
-                    Talkgroup *tg = getTalkgroup(itrNotify->c_str(), dc->talkgroups);
+                    DataModel::Talkgroup *tg = getTalkgroup(itrNotify->c_str(), dc->talkgroups);
                     if(tg != nullptr)
                     {
                         getLogger()->d(TAG, "notify of new tg '%s'", itrNotify->c_str());
@@ -422,8 +424,8 @@ namespace Magellan
                     _ok = false;
                 }
 
-                bool                    _ok;
-                DeviceConfiguration     _dc;
+                bool                                _ok;
+                DataModel::DeviceConfiguration      _dc;
         };
 
         static size_t curlCbDataToDeviceConfiguration(void *ptr, size_t size, size_t nmemb, void *userData)
@@ -488,36 +490,28 @@ namespace Magellan
             }));
         }
 
-        Discoverer *addDiscoverer(const char *serviceType, PFN_MAGELLAN_DISCOVERY_FILTER_HOOK hookFn, const void *userData)
+        Discoverer *addDiscoverer(const char *discoveryType, PFN_MAGELLAN_DISCOVERY_FILTER_HOOK hookFn, const void *userData)
         {
             Discoverer *disco = nullptr;
 
-            DiscoMap_t::iterator itr = m_discos.find(serviceType);
-            if(itr == m_discos.end())
+            if(strcmp(discoveryType, MAGELLAN_MDNS_DISCOVERY_TYPE) == 0 )
             {
-                
-                if(strcmp(serviceType, MAGELLAN_APP_SERVICE_TYPE) == 0 )
-                {
-
-                }
-                else
-                {
-                    disco = new AvahiDiscoverer();
-                }
-
-                disco->setServiceType(serviceType);
-                disco->setHook(hookFn);
-                disco->setUserData(userData);
+                disco = new AvahiDiscoverer();
+                disco->configure(m_configuration.mdns);
             }
-            else
+            else if(strcmp(discoveryType, MAGELLAN_SSDP_DISCOVERY_TYPE) == 0 )
             {
-                disco->addReference();
+                disco = new SsdpDiscoverer();
+                disco->configure(m_configuration.ssdp);
             }
+            
+            disco->setHook(hookFn);
+            disco->setUserData(userData);
 
             return disco;
         }
 
-        void processDiscoveredDevice(DiscoveredDevice *dd)
+        void processDiscoveredDevice(DataModel::DiscoveredDevice *dd)
         {
             m_mainWorkQueue.submit(([dd]()
             {
@@ -540,7 +534,9 @@ namespace Magellan
                 {
                     if(itr->second._cfg.version != dd->configVersion)
                     {
-                        if(itr->second._ps != DeviceTracker::psInProgress && itr->second._ps != DeviceTracker::psComplete)
+                        if(itr->second._ps != DeviceTracker::psInProgress && 
+                           itr->second._ps != DeviceTracker::psPending &&
+                           itr->second._ps != DeviceTracker::psComplete)
                         {
                             needsProcessing = true;
                             itr->second._ps = DeviceTracker::psInProgress;
@@ -589,22 +585,22 @@ namespace Magellan
             }));
         }
 
-        int beginDiscovery(const char *serviceType, MagellanToken_t *pToken, PFN_MAGELLAN_DISCOVERY_FILTER_HOOK hookFn, const void *userData)
+        int beginDiscovery(const char *discoveryType, MagellanToken_t *pToken, PFN_MAGELLAN_DISCOVERY_FILTER_HOOK hookFn, const void *userData)
         {
             int rc = MAGELLAN_RESULT_OK;
 
-            // Use the default Magellan service type if not specified
-            std::string l_serviceType = ((serviceType != nullptr && serviceType[0] != 0) ? serviceType : MAGELLAN_DEFAULT_SERVICE_TYPE);
+            // Use the default Magellan discoverer type if not specified
+            std::string l_discoveryType = ((discoveryType != nullptr && discoveryType[0] != 0) ? discoveryType : MAGELLAN_DEFAULT_DISCOVERY_TYPE);
 
-            m_mainWorkQueue.submitAndWait(([l_serviceType, pToken, hookFn, userData]()
+            m_mainWorkQueue.submitAndWait(([l_discoveryType, pToken, hookFn, userData]()
             {            
-                Discoverer    *disco = addDiscoverer(l_serviceType.c_str(), hookFn, userData);
+                Discoverer    *disco = addDiscoverer(l_discoveryType.c_str(), hookFn, userData);
                 *pToken = (MagellanToken_t)disco;
                 disco->start();
             }));
 
 
-            getLogger()->d(TAG, "magellanBeginDiscovery returns %p", (void*) (*pToken));
+            getLogger()->d(TAG, "beginDiscovery returns %p", (void*) (*pToken));
 
             return rc;
         }
@@ -613,7 +609,7 @@ namespace Magellan
         {
             int rc = MAGELLAN_RESULT_OK;
 
-            getLogger()->d(TAG, "magellanEndDiscovery %p", (void*) token);
+            getLogger()->d(TAG, "endDiscovery %p", (void*) token);
 
             m_mainWorkQueue.submit(([token]()
             {
@@ -627,7 +623,7 @@ namespace Magellan
         {
             int rc = MAGELLAN_RESULT_OK;
 
-            getLogger()->d(TAG, "magellanPauseDiscovery %p", (void*) token);
+            getLogger()->d(TAG, "pauseDiscovery %p", (void*) token);
 
             m_mainWorkQueue.submit(([token]()
             {
@@ -641,7 +637,7 @@ namespace Magellan
         {
             int rc = MAGELLAN_RESULT_OK;
 
-            getLogger()->d(TAG, "magellanResumeDiscovery %p", (void*) token);
+            getLogger()->d(TAG, "resumeDiscovery %p", (void*) token);
 
             m_mainWorkQueue.submit(([token]()
             {

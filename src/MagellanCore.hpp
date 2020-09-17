@@ -8,7 +8,7 @@
 
 #include "MagellanTypes.h"
 #include "MagellanConstants.h"
-#include "MagellanJson.hpp"
+#include "MagellanDataModel.hpp"
 #include "SimpleLogger.hpp"
 #include "Discoverer.hpp"
 
@@ -18,6 +18,7 @@ namespace Magellan
     {
         ILogger *getLogger();
         int setLoggingHook(PFN_MAGELLAN_LOGGING_HOOK hookFn);
+        uint64_t getNowMs();
 
         int initialize(const char *configuration);
         int shutdown();
@@ -27,7 +28,7 @@ namespace Magellan
         int pauseDiscovery(MagellanToken_t token);
         int resumeDiscovery(MagellanToken_t token);
 
-        void processDiscoveredDevice(DiscoveredDevice *dd);
+        void processDiscoveredDevice(DataModel::DiscoveredDevice *dd);
         void processUndiscoveredDevice(const char *discovererKey);
 
         void setTalkgroupCallbacks(PFN_MAGELLAN_ON_NEW_TALKGROUPS pfnOnNewTalkgroups,

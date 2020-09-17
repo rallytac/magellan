@@ -35,7 +35,9 @@ void onModifiedTalkgroups(const char * _Nonnull modifiedTalkgroupsJson, const vo
 void onRemovedTalkgroups(const char * _Nonnull removedTalkgroupsJson, const void * _Nullable userData);
 
 void showUsage();
-void runTest1(int argc, char **argv);
+void runTest1();
+void runTest2();
+std::string loadConfiguration(const char *fn);
 
 int main(int argc, char **argv)
 {
@@ -46,30 +48,89 @@ int main(int argc, char **argv)
     printf("Build time: %s @ %s\n", __DATE__, __TIME__);
     printf("---------------------------------------------------------------------------\n");
 
-    magellanSetLoggingHook(&loggingHook);
+    const char *cfgFile = nullptr;
+
+    for(int x = 1; x < argc; x++)
+    {
+        if(strncmp(argv[x], "-cfg:", 5) == 0)
+        {
+            cfgFile = (argv[x] + 5);
+        }
+        else
+        {
+            printf("ERROR: unknown option '%s'\n", argv[x]);
+            showUsage();
+            return 1;
+        }        
+    }
 
     std::string configJson;
+    
+    if( cfgFile != nullptr)
+    {
+        configJson = loadConfiguration(cfgFile);
+        if(configJson.empty())
+        {
+            printf("ERROR: cannot load configuration from '%s'\n", cfgFile);
+            return 1;
+        }
+    }
+    else
+    {
+        printf("WARNING: no configuration provided' - using defaults\n");
+        configJson.assign("{}");
+    }
 
-    configJson.append("{");
-        configJson.append("\"houseKeeperIntervalMs\":5000,");
-        configJson.append("\"urlCheckerIntervalMs\":2500,");
-        configJson.append("\"urlRetryIntervalMs\":5000,");
-        configJson.append("\"maxUrlConsecutiveErrors\":50,");
-        configJson.append("\"abandonUrlsAfterConsecutiveErrors\":false");
-    configJson.append("}");
+    magellanSetLoggingHook(&loggingHook);
 
     magellanInitialize(configJson.c_str());
     magellanSetTalkgroupCallbacks(onNewTalkgroups, onModifiedTalkgroups, onRemovedTalkgroups, nullptr);
 
-    runTest1(argc, argv);
+    magellanDevTest();
+
+    runTest2();
 
     magellanShutdown();
 
     return 0;
 }
 
+std::string loadConfiguration(const char *fn)
+{
+    std::string rc;
+    FILE *fp = nullptr;
+
+    #ifndef WIN32
+        fp = fopen(fn, "rb");
+    #else
+        if(fopen_s(&fp, fn, "rb") != 0)
+        {
+            fp = nullptr;
+        }
+    #endif
+
+    if(fp != nullptr)
+    {
+        fseek(fp, 0, SEEK_END);
+        size_t sz = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+        char *buff = new char[sz + 1];
+        if( fread(buff, 1, sz, fp) == sz )
+        {
+            buff[sz] = 0;
+            rc.assign(buff, sz);
+        }
+        delete[] buff;
+
+        fclose(fp);
+    }
+
+    return rc;
+}
+
 void showUsage()
 {
+    printf("usage: mth [-cfg:configuration_json_file]\n");
 }
 
 void loggingHook(int level, const char * tag, const char *msg)
@@ -235,25 +296,17 @@ void commandInputLoop(const char *prompt)
     }    
 }
 
-void runTest1(int argc, char **argv)
+void runTest1()
 {
     printf("starting test1\n");
 
     MagellanToken_t                 t;
     std::vector<MagellanToken_t>    tokens;
 
-    // Add the default discoverer
+    // Default discoverer (MDNS)
     t = MAGELLAN_NULL_TOKEN;
-    magellanBeginDiscovery(nullptr, &t, DiscoveryHook, nullptr);
+    magellanBeginDiscovery(MAGELLAN_DEFAULT_DISCOVERY_TYPE, &t, DiscoveryHook, nullptr);
     tokens.push_back(t);
-
-    // Add additional discoverers
-    for(int x = 1; x < argc; x++)
-    {
-        t = MAGELLAN_NULL_TOKEN;
-        magellanBeginDiscovery(argv[x], &t, DiscoveryHook, nullptr);
-        tokens.push_back(t);
-    }
     
     commandInputLoop("test1");
 
@@ -265,4 +318,27 @@ void runTest1(int argc, char **argv)
     }
 
     printf("ended test1\n");
+}
+
+void runTest2()
+{
+    printf("starting test2\n");
+
+    MagellanToken_t                 t;
+    std::vector<MagellanToken_t>    tokens;
+
+    t = MAGELLAN_NULL_TOKEN;
+    magellanBeginDiscovery(MAGELLAN_SSDP_DISCOVERY_TYPE, &t, DiscoveryHook, nullptr);
+    tokens.push_back(t);
+    
+    commandInputLoop("test2");
+
+    for(std::vector<MagellanToken_t>::iterator itr = tokens.begin();
+        itr != tokens.end();
+        itr++)
+    {
+        magellanEndDiscovery(*itr);
+    }
+
+    printf("ended test2\n");
 }

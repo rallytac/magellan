@@ -15,6 +15,15 @@ extern "C"
 #endif
 
 /**
+ * @brief [SYNC] *DEVELOPMENT ONLY*
+ *
+ * Call this function to into the library for development and testing purposes
+ *
+ */
+MAGELLAN_API int magellanDevTest();
+
+
+/**
  * @brief [SYNC] Initializes the Magellan library.
  *
  * Call this function to initialize the library prior starting main operation.
@@ -84,6 +93,8 @@ MAGELLAN_API void magellanSetTalkgroupCallbacks(PFN_MAGELLAN_ON_NEW_TALKGROUPS p
                             PFN_MAGELLAN_ON_MODIFIED_TALKGROUPS pfnOnModifiedTalkgroups,
                             PFN_MAGELLAN_ON_REMOVED_TALKGROUPS pfnOnRemovedTalkgroups,
                             const void *userData);
+
+
 
 #ifdef __cplusplus
 }

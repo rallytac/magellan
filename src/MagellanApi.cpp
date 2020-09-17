@@ -13,6 +13,11 @@
 #include "MagellanCore.hpp"
 
 // Exposed C API
+MAGELLAN_API int magellanDevTest()
+{
+    return 0;
+}
+
 MAGELLAN_API int magellanSetLoggingHook(PFN_MAGELLAN_LOGGING_HOOK hookFn)
 {
     return Magellan::Core::setLoggingHook(hookFn);

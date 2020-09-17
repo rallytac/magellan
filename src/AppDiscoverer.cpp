@@ -3,6 +3,7 @@
 //  All rights reserved.
 //
 
+#include "MagellanDataModel.hpp"
 #include "AppDiscoverer.hpp"
 #include "ILogger.hpp"
 
@@ -18,6 +19,11 @@ namespace Magellan
 
     AppDiscoverer::~AppDiscoverer()
     {
+    }
+
+    bool AppDiscoverer::configure(DataModel::JsonObjectBase& configuration)
+    {
+        return true;
     }
 
     bool AppDiscoverer::start()

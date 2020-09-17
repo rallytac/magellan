@@ -34,6 +34,7 @@ set(SOURCES MagellanCore.cpp
             SimpleLogger.cpp
             ReferenceCountedObject.cpp
             AppDiscoverer.cpp
+            SsdpDiscoverer.cpp
             TimerManager.cpp)
 
 if(LINUX)
@@ -44,7 +45,7 @@ add_library(magellan-static STATIC ${SOURCES})
 
 target_include_directories(magellan-static PRIVATE ./)
 
-target_precompile_headers(magellan-static PUBLIC MagellanJson.hpp)
+target_precompile_headers(magellan-static PUBLIC MagellanDataModel.hpp)
 
 #------------------------------------------------
 # mth executable

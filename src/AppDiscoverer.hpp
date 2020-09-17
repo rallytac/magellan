@@ -18,6 +18,7 @@ namespace Magellan
         AppDiscoverer();
         virtual ~AppDiscoverer();
 
+        virtual bool configure(DataModel::JsonObjectBase& configuration);
         virtual bool start();
         virtual void stop();
         virtual void pause();

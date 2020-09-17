@@ -47,11 +47,26 @@ static const int MAGELLAN_LOG_LEVEL_DEBUG = 4;
 /** @brief A NULL value for a Magellan token **/
 #define MAGELLAN_NULL_TOKEN                 nullptr
 
-/** @brief The default Magellan service type for **/
-#define MAGELLAN_DEFAULT_SERVICE_TYPE       "_magellan._tcp"
+/** @brief MDNS discovery type **/
+#define MAGELLAN_MDNS_DISCOVERY_TYPE                "mdns"
 
-/** @brief The service type for a discoverer provided by the application **/
-#define MAGELLAN_APP_SERVICE_TYPE       "_magellan._app"
+/** @brief SSDP discovery type **/
+#define MAGELLAN_SSDP_DISCOVERY_TYPE                "ssdp"
+
+/** @brief Trellisware discovery type **/
+#define MAGELLAN_TRELLISWAREDISCOVERY_TYPE          "trellisware"
+
+/** @brief CISTECH discovery type **/
+#define MAGELLAN_CISTECH_DISCOVERYTYPE              "cistech"
+
+/** @brief CUBIC Vocality discovery type **/
+#define MAGELLAN_VOCALITY_DISCOVERY_TYPE            "vocality"
+
+/** @brief Application discovery type **/
+#define MAGELLAN_APPLICATION_DISCOVERY_TYPE         "application"
+
+/** @brief The default Magellan discovery type **/
+#define MAGELLAN_DEFAULT_DISCOVERY_TYPE         MAGELLAN_MDNS_DISCOVERY_TYPE
 
 /** @addtogroup discoveryFilterCodes Magellan Discovery Filter Codes
  *

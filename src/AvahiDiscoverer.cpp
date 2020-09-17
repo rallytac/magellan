@@ -8,7 +8,7 @@
 #include "AvahiDiscoverer.hpp"
 #include "ILogger.hpp"
 #include "MagellanCore.hpp"
-#include "MagellanJson.hpp"
+#include "MagellanDataModel.hpp"
 
 namespace Magellan
 {
@@ -31,6 +31,12 @@ namespace Magellan
         stop();
         ReferenceCountedObject::deleteThis();
     }
+
+    bool AvahiDiscoverer::configure(DataModel::JsonObjectBase& configuration)
+    {
+        _configuration = (DataModel::Mdns&)configuration;
+        return true;
+    }
         
     bool AvahiDiscoverer::start()
     {
@@ -45,31 +51,31 @@ namespace Magellan
                 _poller = avahi_threaded_poll_new();
                 if(_poller == nullptr)
                 {
-                    Magellan::Core::getLogger()->e(TAG, "{%p} avahi_threaded_poll_new failed()", (void*) this);
+                    Core::getLogger()->e(TAG, "{%p} avahi_threaded_poll_new failed()", (void*) this);
                     throw "";
                 }
 
                 _client = avahi_client_new(avahi_threaded_poll_get(_poller), AVAHI_CLIENT_NO_FAIL, clientCallbackHelper, (void*)this, &err);
                 if(_client == nullptr)
                 {
-                    Magellan::Core::getLogger()->e(TAG, "{%p} avahi_client_new failed() - %s", (void*) this, avahi_strerror(err));
+                    Core::getLogger()->e(TAG, "{%p} avahi_client_new failed() - %s", (void*) this, avahi_strerror(err));
                     throw "";
                 }
 
-                _serviceBrowser = avahi_service_browser_new(_client, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, getServiceType(), nullptr, (AvahiLookupFlags)0, AvahiDiscoverer::browseCallbackHelper, (void*)this);
+                _serviceBrowser = avahi_service_browser_new(_client, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, _configuration.serviceType.c_str(), nullptr, (AvahiLookupFlags)0, AvahiDiscoverer::browseCallbackHelper, (void*)this);
                 if(_serviceBrowser == nullptr)
                 {
-                    Magellan::Core::getLogger()->e(TAG, "{%p} avahi_service_browser_new failed('%s') - %s", (void*) this, getServiceType(), avahi_strerror(avahi_client_errno(_client)));
+                    Core::getLogger()->e(TAG, "{%p} avahi_service_browser_new failed('%s') - %s", (void*) this, _configuration.serviceType.c_str(), avahi_strerror(avahi_client_errno(_client)));
                     throw "";
                 }
 
                 if(avahi_threaded_poll_start(_poller) < 0)
                 {
-                    Magellan::Core::getLogger()->e(TAG, "{%p} avahi_threaded_poll_start failed('%s') - %s", (void*) this, getServiceType(), avahi_strerror(avahi_client_errno(_client)));
+                    Core::getLogger()->e(TAG, "{%p} avahi_threaded_poll_start failed('%s') - %s", (void*) this, _configuration.serviceType.c_str(), avahi_strerror(avahi_client_errno(_client)));
                     throw "";
                 }
 
-                Magellan::Core::getLogger()->d(TAG, "{%p} started for '%s'", (void*) this, getServiceType());
+                Core::getLogger()->d(TAG, "{%p} started for '%s'", (void*) this, _configuration.serviceType.c_str());
             }
             catch(...)
             {
@@ -109,18 +115,18 @@ namespace Magellan
                 _poller = nullptr;
             }
 
-            Magellan::Core::getLogger()->d(TAG, "{%p} stopped", (void*) this);
+            Core::getLogger()->d(TAG, "{%p} stopped", (void*) this);
         }
     }
 
     void AvahiDiscoverer::pause()
     {
-        Magellan::Core::getLogger()->d(TAG, "{%p} paused", (void*) this);
+        Core::getLogger()->d(TAG, "{%p} paused", (void*) this);
     }
 
     void AvahiDiscoverer::resume()
     {
-        Magellan::Core::getLogger()->d(TAG, "{%p} resumed", (void*) this);
+        Core::getLogger()->d(TAG, "{%p} resumed", (void*) this);
     }
 
     /*static*/ void AvahiDiscoverer::clientCallbackHelper(AvahiClient *c, 
@@ -165,7 +171,7 @@ namespace Magellan
         switch(event) 
         {
             case AVAHI_BROWSER_FAILURE:
-                Magellan::Core::getLogger()->e(TAG, "{%p} %s", (void*) this, avahi_strerror(avahi_client_errno(_client)));
+                Core::getLogger()->e(TAG, "{%p} %s", (void*) this, avahi_strerror(avahi_client_errno(_client)));
                 avahi_threaded_poll_quit(_poller);
                 break;
 
@@ -175,25 +181,25 @@ namespace Magellan
                 asr = avahi_service_resolver_new(_client, interface, protocol, name, type, domain, AVAHI_PROTO_UNSPEC, (AvahiLookupFlags)0, resolveCallbackHelper, (void*) this);
                 if(asr != nullptr)
                 {
-                    Magellan::Core::getLogger()->d(TAG, "{%p} resolving new service '%s' of type '%s' in domain '%s'", (void*) this, name, type, domain);
+                    Core::getLogger()->d(TAG, "{%p} resolving new service '%s' of type '%s' in domain '%s'", (void*) this, name, type, domain);
                 }
                 else
                 {
-                    Magellan::Core::getLogger()->e(TAG, "{%p} failed to initiate resolving new service '%s' of type '%s' in domain '%s' - %s", (void*) this, name, type, domain, avahi_strerror(avahi_client_errno(_client)));
+                    Core::getLogger()->e(TAG, "{%p} failed to initiate resolving new service '%s' of type '%s' in domain '%s' - %s", (void*) this, name, type, domain, avahi_strerror(avahi_client_errno(_client)));
                 }
                 break;
                 
             case AVAHI_BROWSER_REMOVE:
-                Magellan::Core::getLogger()->d(TAG, "{%p} removed service '%s' of type '%s' in domain '%s'", (void*) this, name, type, domain);
+                Core::getLogger()->d(TAG, "{%p} removed service '%s' of type '%s' in domain '%s'", (void*) this, name, type, domain);
 
                 char buff[1024];
-                sprintf(buff, "%s/%s/%s/%s", getImplementation(), getServiceType(), domain, name);
-                Magellan::Core::processUndiscoveredDevice(buff);
+                sprintf(buff, "%s/%s/%s/%s", getImplementation(), _configuration.serviceType.c_str(), domain, name);
+                Core::processUndiscoveredDevice(buff);
                 break;
 
             case AVAHI_BROWSER_ALL_FOR_NOW:
             case AVAHI_BROWSER_CACHE_EXHAUSTED:
-                //Magellan::Core::getLogger()->d(TAG, "{%p} %s", (void*) this, event == AVAHI_BROWSER_CACHE_EXHAUSTED ? "CACHE_EXHAUSTED" : "ALL_FOR_NOW");
+                //Core::getLogger()->d(TAG, "{%p} %s", (void*) this, event == AVAHI_BROWSER_CACHE_EXHAUSTED ? "CACHE_EXHAUSTED" : "ALL_FOR_NOW");
                 break;
         }
     }
@@ -231,7 +237,7 @@ namespace Magellan
         switch (event) 
         {
             case AVAHI_RESOLVER_FAILURE:
-                Magellan::Core::getLogger()->e(TAG, "{%p} failed to resolve service '%s' of type '%s' in domain '%s': %s", (void*) this, name, type, domain, avahi_strerror(avahi_client_errno(avahi_service_resolver_get_client(r))));
+                Core::getLogger()->e(TAG, "{%p} failed to resolve service '%s' of type '%s' in domain '%s': %s", (void*) this, name, type, domain, avahi_strerror(avahi_client_errno(avahi_service_resolver_get_client(r))));
                 break;
 
             case AVAHI_RESOLVER_FOUND: 
@@ -246,7 +252,7 @@ namespace Magellan
                 std::string json;
 
                 json.append("{");
-                    json.append("\"serviceType\":\""); json.append(getServiceType()); json.append("\"");
+                    json.append("\"serviceType\":\""); json.append(_configuration.serviceType.c_str()); json.append("\"");
                     json.append(",\"implementation\":\""); json.append(getImplementation()); json.append("\"");
                     json.append(",\"name\":\""); json.append(name); json.append("\"");
                     json.append(",\"type\":\""); json.append(type); json.append("\"");
@@ -258,12 +264,12 @@ namespace Magellan
 
                 if(filterResponse == MAGELLAN_FILTER_PROCEED)
                 {
-                    DiscoveredDevice    *dd = new DiscoveredDevice();
+                    DataModel::DiscoveredDevice    *dd = new DataModel::DiscoveredDevice();
 
                     AvahiStringList *curr = txt;
                     char buff[1024];
 
-                    sprintf(buff, "%s/%s/%s/%s", getImplementation(), getServiceType(), domain, name);
+                    sprintf(buff, "%s/%s/%s/%s", getImplementation(), _configuration.serviceType.c_str(), domain, name);
                     dd->discovererKey.assign(buff);
 
                     while( curr != nullptr )
@@ -297,7 +303,7 @@ namespace Magellan
                     
                     dd->rootUrl.assign(buff);
 
-                    Magellan::Core::getLogger()->d(TAG, "{%p} [%s] resolved service '%s' of type '%s' in domain '%s': "
+                    Core::getLogger()->d(TAG, "{%p} [%s] resolved service '%s' of type '%s' in domain '%s': "
                                         "%s:%u (%s)"
                                         ", TXT=%s"
                                         ", cookie is %u"
@@ -325,7 +331,7 @@ namespace Magellan
                                     dd->configVersion,
                                     dd->rootUrl.c_str());
                     
-                    Magellan::Core::processDiscoveredDevice(dd);
+                    Core::processDiscoveredDevice(dd);
                 }
                                     
                 avahi_free(t);

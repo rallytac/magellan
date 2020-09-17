@@ -30,18 +30,6 @@ namespace Magellan
         /** @brief Destructor **/
         virtual ~Discoverer()      {}
 
-        /** @brief Set the service type **/
-        inline virtual void setServiceType(const char *serviceType)
-        {
-            _serviceType = serviceType;
-        }
-
-        /** @brief Get the service type **/
-        inline virtual const char *getServiceType()
-        {
-            return _serviceType.c_str();
-        }
-
         /** @brief Set the implementation **/
         inline virtual void setImplementation(const char *implementation)
         {
@@ -53,6 +41,9 @@ namespace Magellan
         {
             return _implementation.c_str();
         }
+
+        /** @brief Configure the discoverer **/
+        virtual bool configure(DataModel::JsonObjectBase& configuration) = 0;
 
         /** @brief Start the discoverer **/
         virtual bool start() = 0;
@@ -116,9 +107,6 @@ namespace Magellan
         }
 
     private:
-        /** @brief The service type for this discoverer **/
-        std::string                         _serviceType;
-
         /** @brief The implementation of this discoverer **/
         std::string                         _implementation;
 
