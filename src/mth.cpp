@@ -37,6 +37,7 @@ void onRemovedTalkgroups(const char * _Nonnull removedTalkgroupsJson, const void
 void showUsage();
 void runTest1();
 void runTest2();
+void runTest3();
 std::string loadConfiguration(const char *fn);
 
 int main(int argc, char **argv)
@@ -88,7 +89,7 @@ int main(int argc, char **argv)
 
     magellanDevTest();
 
-    runTest2();
+    runTest3();
 
     magellanShutdown();
 
@@ -341,4 +342,37 @@ void runTest2()
     }
 
     printf("ended test2\n");
+}
+
+void runTest3()
+{
+    printf("starting test3\n");
+
+    MagellanToken_t                 t;
+    std::vector<MagellanToken_t>    tokens;
+
+    // MDNS
+    {
+        t = MAGELLAN_NULL_TOKEN;
+        magellanBeginDiscovery(MAGELLAN_MDNS_DISCOVERY_TYPE, &t, DiscoveryHook, nullptr);
+        tokens.push_back(t);
+    }
+
+    // SSDP
+    {
+        t = MAGELLAN_NULL_TOKEN;
+        magellanBeginDiscovery(MAGELLAN_SSDP_DISCOVERY_TYPE, &t, DiscoveryHook, nullptr);
+        tokens.push_back(t);
+    }
+    
+    commandInputLoop("test3");
+
+    for(std::vector<MagellanToken_t>::iterator itr = tokens.begin();
+        itr != tokens.end();
+        itr++)
+    {
+        magellanEndDiscovery(*itr);
+    }
+
+    printf("ended test3\n");
 }
