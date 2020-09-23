@@ -8,6 +8,7 @@ cmake_minimum_required(VERSION 3.4.1)
 project(rtsmagellan)
 
 set(CMAKE_CXX_STANDARD 11)
+set(SANITIZE FALSE)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     set(LINUX true)
@@ -21,9 +22,12 @@ add_compile_options(-Wall
                     -fvisibility=hidden
                     -O0 
                     -ggdb 
-                    -pedantic
-                    -fsanitize=address
-                    -fno-omit-frame-pointer)
+                    -pedantic)
+
+if(SANITIZE)
+    add_compile_options(-fsanitize=address
+                        -fno-omit-frame-pointer)                    
+endif()
 
 #------------------------------------------------
 # magellan-static library
@@ -55,5 +59,9 @@ add_executable(mth mth.cpp)
 target_include_directories(mth PRIVATE ./)
 
 if(LINUX)
-    target_link_libraries(mth PRIVATE asan magellan-static avahi-client avahi-common pthread curl ssl crypto)
+    if(SANITIZE)
+        target_link_libraries(mth PRIVATE asan)
+    endif()
+
+    target_link_libraries(mth PRIVATE magellan-static avahi-client avahi-common pthread curl ssl crypto)
 endif()

@@ -58,12 +58,13 @@ namespace Magellan
 
         static const char *TAG = "MagellanCore";
 
-        static WorkQueue                                m_mainWorkQueue;
-        static WorkQueue                                m_downloadWorkQueue;
-        static std::atomic<bool>                        m_initialized(false);
+        static WorkQueue                                *m_mainWorkQueue = nullptr;
+        static WorkQueue                                *m_downloadWorkQueue = nullptr;
         static SimpleLogger                             m_simpleLogger;
+        static TimerManager                             *m_timerManager = nullptr;
+
+        static std::atomic<bool>                        m_initialized(false);
         static DeviceMap_t                              m_devices;
-        static TimerManager                             m_timerManager;
 
 
         static PFN_MAGELLAN_ON_NEW_TALKGROUPS           m_pfnOnNewTalkgroups = nullptr;
@@ -88,6 +89,19 @@ namespace Magellan
         ILogger *getLogger()
         {
             return &m_simpleLogger;
+        }
+
+        int setLoggingLevel(int level)
+        {
+            if(m_simpleLogger.isValidLevel(level))
+            {
+                m_simpleLogger.setMaxLevel((ILogger::Level)level);
+                return MAGELLAN_RESULT_OK;
+            }
+            else
+            {
+                return MAGELLAN_RESULT_INVALID_PARAMETERS;
+            }
         }
 
         int setLoggingHook(PFN_MAGELLAN_LOGGING_HOOK hookFn)
@@ -121,7 +135,7 @@ namespace Magellan
 
                         std::string l_url = dt->_url.c_str();
                         std::string l_key = dt->_key.c_str();
-                        m_downloadWorkQueue.submit(([l_url, l_key]()
+                        m_downloadWorkQueue->submit(([l_url, l_key]()
                         {            
                             doUrlDownload(l_url.c_str(), l_key.c_str());
                         }));
@@ -132,7 +146,7 @@ namespace Magellan
 
         bool tmrCbHouseKeeper(uint64_t hnd, const void *ctx)
         {
-            m_mainWorkQueue.submit(([]()
+            m_mainWorkQueue->submit(([]()
             {
                 performHousekeeping();
             }));
@@ -142,7 +156,7 @@ namespace Magellan
 
         bool tmrCbUrlChecker(uint64_t hnd, const void *ctx)
         {
-            m_mainWorkQueue.submit(([]()
+            m_mainWorkQueue->submit(([]()
             {
                 performUrlChecking();
             }));
@@ -170,6 +184,10 @@ namespace Magellan
                 return rc;
             }
 
+            m_mainWorkQueue = new WorkQueue();
+            m_downloadWorkQueue = new WorkQueue();
+            m_timerManager = new TimerManager();
+
             getLogger()->d(TAG, "magellanInitialize %s", (configuration == nullptr ? "" : configuration));
 
             if(configuration != nullptr && configuration[0] != 0)
@@ -187,13 +205,14 @@ namespace Magellan
 
             initCrypto();
 
-            m_mainWorkQueue.start();
-            m_downloadWorkQueue.start();
-            m_timerManager.start();
+
+            m_mainWorkQueue->start();
+            m_downloadWorkQueue->start();
+            m_timerManager->start();
             curl_global_init(CURL_GLOBAL_ALL);
 
-            m_tmrHouseKeeper = m_timerManager.setTimer(tmrCbHouseKeeper, nullptr, m_configuration.houseKeeperIntervalMs, true);
-            m_tmrUrlChecker = m_timerManager.setTimer(tmrCbUrlChecker, nullptr, m_configuration.urlCheckerIntervalMs, true);
+            m_tmrHouseKeeper = m_timerManager->setTimer(tmrCbHouseKeeper, nullptr, m_configuration.houseKeeperIntervalMs, true);
+            m_tmrUrlChecker = m_timerManager->setTimer(tmrCbUrlChecker, nullptr, m_configuration.restLink.urlCheckerIntervalMs, true);
 
             return rc;
         }
@@ -209,19 +228,27 @@ namespace Magellan
 
             getLogger()->d(TAG, "magellanShutdown");
 
-            m_timerManager.cancelTimer(m_tmrHouseKeeper);
+            m_timerManager->cancelTimer(m_tmrHouseKeeper);
             m_tmrHouseKeeper = 0;
 
-            m_timerManager.cancelTimer(m_tmrUrlChecker);
+            m_timerManager->cancelTimer(m_tmrUrlChecker);
             m_tmrUrlChecker = 0;
 
-            m_timerManager.stop();
+            m_timerManager->stop();
 
             curl_global_cleanup();
-            m_downloadWorkQueue.stop();
-            m_mainWorkQueue.stop();
+            m_downloadWorkQueue->stop();
+            m_mainWorkQueue->stop();
 
             deinitCrypto();
+
+            delete m_mainWorkQueue;
+            delete m_downloadWorkQueue;
+            delete m_timerManager;
+
+            m_mainWorkQueue = nullptr;
+            m_downloadWorkQueue = nullptr;
+            m_timerManager = nullptr;
 
             m_initialized = false;
             
@@ -269,9 +296,9 @@ namespace Magellan
             {
                 dt->_consecutiveErrors++;
 
-                if(dt->_consecutiveErrors >= m_configuration.maxUrlConsecutiveErrors)
+                if(dt->_consecutiveErrors >= m_configuration.restLink.maxUrlConsecutiveErrors)
                 {
-                    if(m_configuration.abandonUrlsAfterConsecutiveErrors)
+                    if(m_configuration.restLink.abandonUrlsAfterConsecutiveErrors)
                     {
                         getLogger()->e(TAG, "too many consecutive errors on %s - abandoning", discovererKey);
                         notifyOfLostDevice(dt);
@@ -282,11 +309,11 @@ namespace Magellan
                     }
 
                     // Stay at ceiling
-                    dt->_consecutiveErrors = m_configuration.maxUrlConsecutiveErrors;
+                    dt->_consecutiveErrors = m_configuration.restLink.maxUrlConsecutiveErrors;
                 }
 
                 uint64_t now = getNowMs();
-                uint64_t rndAmount = (rand() % (dt->_consecutiveErrors * m_configuration.urlRetryIntervalMs));
+                uint64_t rndAmount = (rand() % (dt->_consecutiveErrors * m_configuration.restLink.urlRetryIntervalMs));
 
                 dt->_nextCheckTs = ((now + (dt->_consecutiveErrors * 1000)) + rndAmount);
                 dt->_ps = DeviceTracker::psPending;
@@ -298,8 +325,7 @@ namespace Magellan
 
             // Reset these
             dt->_consecutiveErrors = 0;
-            dt->_nextCheckTs = 0;
-            
+            dt->_nextCheckTs = 0;            
 
             std::vector<std::string>     newTalkGroups;
             std::vector<std::string>     modifiedTalkGroups;
@@ -408,7 +434,7 @@ namespace Magellan
                     }
                 }
 
-                m_pfnOnModifiedTalkgroups(tgArray.dump().c_str(), m_pfOnTgUserData);
+                m_pfnOnNewTalkgroups(tgArray.dump().c_str(), m_pfOnTgUserData);
             }
 
             // Update our cached configuration
@@ -453,8 +479,19 @@ namespace Magellan
             curl_handle = curl_easy_init();
 
             curl_easy_setopt(curl_handle, CURLOPT_URL, url);
-            curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 0L);
+            curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, (m_configuration.restLink.logUrlOperation ? 1L : 0L));
             curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L);
+
+            curl_easy_setopt(curl_handle, CURLOPT_SSLCERT, m_configuration.restLink.certFile.c_str());
+            curl_easy_setopt(curl_handle, CURLOPT_SSLCERTPASSWD, m_configuration.restLink.certPass.c_str());
+
+            curl_easy_setopt(curl_handle, CURLOPT_SSLKEY, m_configuration.restLink.keyFile.c_str());
+            curl_easy_setopt(curl_handle, CURLOPT_SSLKEYPASSWD, m_configuration.restLink.keyPass.c_str());
+
+            curl_easy_setopt(curl_handle, CURLOPT_CAINFO, m_configuration.restLink.caBundle.c_str());
+
+            curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, (m_configuration.restLink.verifyPeer ? 1L : 0L));
+            curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, (m_configuration.restLink.verifyHost ? 1L : 0L));
 
             curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, dcctx);
             curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, curlCbDataToDeviceConfiguration);
@@ -467,7 +504,7 @@ namespace Magellan
 
             dcctx->_dc.discovererKey = discovererKey;
 
-            m_mainWorkQueue.submit(([cc, dcctx, l_discovererKey]()
+            m_mainWorkQueue->submit(([cc, dcctx, l_discovererKey]()
             {            
                 DeviceMap_t::iterator itr = m_devices.find(l_discovererKey);
                 if(itr != m_devices.end())
@@ -477,6 +514,13 @@ namespace Magellan
                     if(cc != CURLE_OK)
                     {
                         getLogger()->e(TAG, "curl error %d (%s) for device %s", (int)cc, curl_easy_strerror(cc), l_discovererKey.c_str());
+                    }
+
+                    for(std::vector<DataModel::Talkgroup>::iterator itr = dcctx->_dc.talkgroups.begin();
+                        itr != dcctx->_dc.talkgroups.end();
+                        itr++)
+                    {
+                        itr->deviceKey.assign(l_discovererKey); 
                     }
 
                     processDeviceConfiguration(l_discovererKey.c_str(), dt, &dcctx->_dc, (cc == CURLE_OK) ? false : true);
@@ -513,7 +557,7 @@ namespace Magellan
 
         void processDiscoveredDevice(DataModel::DiscoveredDevice *dd)
         {
-            m_mainWorkQueue.submit(([dd]()
+            m_mainWorkQueue->submit(([dd]()
             {
                 bool needsProcessing = false;
                 DeviceMap_t::iterator itr = m_devices.find(dd->discovererKey);
@@ -555,7 +599,7 @@ namespace Magellan
 
                 if(needsProcessing)
                 {
-                    m_downloadWorkQueue.submit(([dd]()
+                    m_downloadWorkQueue->submit(([dd]()
                     {            
                         doUrlDownload(dd->rootUrl.c_str(), dd->discovererKey.c_str());
                         delete dd;
@@ -574,7 +618,7 @@ namespace Magellan
 
             std::string l_discovererKey = discovererKey;
 
-            m_mainWorkQueue.submit(([l_discovererKey]()
+            m_mainWorkQueue->submit(([l_discovererKey]()
             {
                 DeviceMap_t::iterator itrDev = m_devices.find(l_discovererKey);
                 if(itrDev != m_devices.end())
@@ -592,7 +636,7 @@ namespace Magellan
             // Use the default Magellan discoverer type if not specified
             std::string l_discoveryType = ((discoveryType != nullptr && discoveryType[0] != 0) ? discoveryType : MAGELLAN_DEFAULT_DISCOVERY_TYPE);
 
-            m_mainWorkQueue.submitAndWait(([l_discoveryType, pToken, hookFn, userData]()
+            m_mainWorkQueue->submitAndWait(([l_discoveryType, pToken, hookFn, userData]()
             {            
                 Discoverer    *disco = addDiscoverer(l_discoveryType.c_str(), hookFn, userData);
                 *pToken = (MagellanToken_t)disco;
@@ -611,7 +655,7 @@ namespace Magellan
 
             getLogger()->d(TAG, "endDiscovery %p", (void*) token);
 
-            m_mainWorkQueue.submit(([token]()
+            m_mainWorkQueue->submit(([token]()
             {
                 ((Discoverer*)token)->releaseReference();
             }));
@@ -625,7 +669,7 @@ namespace Magellan
 
             getLogger()->d(TAG, "pauseDiscovery %p", (void*) token);
 
-            m_mainWorkQueue.submit(([token]()
+            m_mainWorkQueue->submit(([token]()
             {
                 ((Discoverer*)token)->pause();
             }));
@@ -639,7 +683,7 @@ namespace Magellan
 
             getLogger()->d(TAG, "resumeDiscovery %p", (void*) token);
 
-            m_mainWorkQueue.submit(([token]()
+            m_mainWorkQueue->submit(([token]()
             {
                 ((Discoverer*)token)->resume();
             }));
@@ -652,7 +696,7 @@ namespace Magellan
                                    PFN_MAGELLAN_ON_REMOVED_TALKGROUPS pfnOnRemovedTalkgroups,
                                    const void *userData)
         {
-            m_mainWorkQueue.submit(([pfnOnNewTalkgroups,
+            m_mainWorkQueue->submit(([pfnOnNewTalkgroups,
                                      pfnOnModifiedTalkgroups,
                                      pfnOnRemovedTalkgroups,
                                      userData]()

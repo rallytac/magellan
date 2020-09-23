@@ -1,10 +1,10 @@
 {
-	"version": 666,
+	"version": 234,
 	"dateTimeStamp": "2020-04-15T17:32:28Z",
 	"thingInfo": {
 	  "id": "{e15b1b69-5117-4a7c-9399-345069945198}",
 	  "type": "Radio Gateway",
-	  "manufacturer": "Evil LMR",
+	  "manufacturer": "Rock-And-Roll LMR",
 	  "capabilities": [
 		"voice"
 	  ]
@@ -46,6 +46,44 @@
 		  "minLevel": 0,
 		  "maxLevel": 0
 		}
-	  }
+	  },
+	  
+	  {
+		"type": 1,
+		"id": "{55667d53-f66c-4ece-a906-838142436d3a}",
+		"name": "Stairway To Heaven",
+		"cryptoPassword": "FFEEDDCCBBAA",
+		"presence": {
+		  "forceOnAudioTransmit": false,
+		  "format": 1,
+		  "intervalSecs": 30
+		},
+		"rx": {
+		  "address": "239.1.1.2",
+		  "port": 18002
+		},
+		"tx": {
+		  "address": "239.1.1.2",
+		  "port": 18002
+		},
+		"txAudio": {
+		  "encoder": "ctOpus8000",
+		  "extensionSendInterval": 10,
+		  "fdx": false,
+		  "framingMs": 60,
+		  "initialHeaderBurst": 5,
+		  "maxTxSecs": 30,
+		  "noHdrExt": false,
+		  "trailingHeaderBurst": 5
+		},
+		"networkOptions": {
+		  "priority": 4,
+		  "ttl": 128
+		},
+		"security": {
+		  "minLevel": 0,
+		  "maxLevel": 0
+		}
+	  }	  
 	]
   }

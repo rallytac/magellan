@@ -23,9 +23,12 @@
 #include <vector>
 
 #include "MagellanApi.h"
+#include "MagellanDataModel.hpp"
 
 const size_t MAX_CMD_BUFF_SIZE = 4096;
 const char *LOG_TAG = "mth";
+
+std::map<std::string, Magellan::DataModel::Talkgroup>   m_talkgroups;
 
 void loggingHook(int level, const char * _Nonnull tag, const char *msg);
 int discoveryFilterHook(const char * _Nonnull detailJson, const void * _Nullable userData);
@@ -38,12 +41,17 @@ void showUsage();
 void runTest1();
 void runTest2();
 void runTest3();
+void runTest4();
 std::string loadConfiguration(const char *fn);
+void showTalkgroups();
+void showHelp();
+
+int m_testLoops = 0;
 
 int main(int argc, char **argv)
 {
     printf("---------------------------------------------------------------------------\n");
-    printf("mth version 0.1\n");
+    printf("Magellan Test Harness (mth) version 0.1\n");
     printf("\n");
     printf("Copyright (c) 2020 Rally Tactical Systems, Inc.\n");
     printf("Build time: %s @ %s\n", __DATE__, __TIME__);
@@ -56,6 +64,10 @@ int main(int argc, char **argv)
         if(strncmp(argv[x], "-cfg:", 5) == 0)
         {
             cfgFile = (argv[x] + 5);
+        }
+        else if(strncmp(argv[x], "-tl:", 4) == 0)
+        {
+            m_testLoops = atoi(argv[x] + 4);
         }
         else
         {
@@ -82,15 +94,19 @@ int main(int argc, char **argv)
         configJson.assign("{}");
     }
 
+    // Set the logging hook before anything so that we can log initialization
     magellanSetLoggingHook(&loggingHook);
 
+    // Fire up the library
     magellanInitialize(configJson.c_str());
+
+    // Register our talkgroup notification functions
     magellanSetTalkgroupCallbacks(onNewTalkgroups, onModifiedTalkgroups, onRemovedTalkgroups, nullptr);
 
-    magellanDevTest();
+    // Run this test
+    runTest3();    
 
-    runTest3();
-
+    // Shut it down
     magellanShutdown();
 
     return 0;
@@ -132,6 +148,39 @@ std::string loadConfiguration(const char *fn)
 void showUsage()
 {
     printf("usage: mth [-cfg:configuration_json_file]\n");
+}
+
+void showHelp()
+{
+    printf("\n");
+    printf("=====HELP=====\n");
+
+    printf("q      .................... quit\n");
+    printf("?      .................... help\n");
+    printf("clear  .................... clear the screen\n");
+    printf("sg     .................... show talkgroups\n");
+
+    printf("\n");
+}
+
+void showTalkgroups()
+{
+    printf("\n");
+    printf("=====TALKGROUPS=====\n");
+
+    printf("ID                                                               Name                                                             Device\n");
+    printf("---------------------------------------------------------------- ---------------------------------------------------------------- ------------------------------------------------------------------------\n");
+    for(std::map<std::string, Magellan::DataModel::Talkgroup>::iterator itr = m_talkgroups.begin();
+        itr != m_talkgroups.end();
+        itr++)
+    {
+        printf("%-64s %-64s %-64s\n", 
+                itr->second.id.c_str(),
+                itr->second.name.c_str(),
+                itr->second.deviceKey.c_str());
+    }
+
+    printf("\n");
 }
 
 void loggingHook(int level, const char * tag, const char *msg)
@@ -232,17 +281,119 @@ int DiscoveryHook(const char * _Nonnull detailJson, const void * _Nullable userD
 
 void onNewTalkgroups(const char * _Nonnull newTalkgroupsJson, const void * _Nullable userData)
 {    
-    magellanLogMessage(MAGELLAN_LOG_LEVEL_INFORMATIONAL, LOG_TAG, newTalkgroupsJson);
+    try
+    {
+        std::vector<Magellan::DataModel::Talkgroup> tga = nlohmann::json::parse(newTalkgroupsJson);
+
+        for(std::vector<Magellan::DataModel::Talkgroup>::iterator itr = tga.begin();
+            itr != tga.end();
+            itr++)
+        {
+            char buff[1024];
+
+            std::map<std::string, Magellan::DataModel::Talkgroup>::iterator itrFnd = m_talkgroups.find(itr->id);
+            if(itrFnd == m_talkgroups.end())
+            {
+                m_talkgroups[itr->id] = *itr;
+
+                sprintf(buff, "New TG: '%s' - '%s'",
+                        itr->id.c_str(),
+                        itr->name.c_str());
+
+                magellanLogMessage(MAGELLAN_LOG_LEVEL_INFORMATIONAL, LOG_TAG, buff);
+            }
+            else
+            {
+                sprintf(buff, "New TG: '%s' - '%s' - ALREADY EXISTS",
+                        itr->id.c_str(),
+                        itr->name.c_str());
+
+                magellanLogMessage(MAGELLAN_LOG_LEVEL_FATAL, LOG_TAG, buff);
+            }
+        }
+    }
+    catch(...)
+    {
+        magellanLogMessage(MAGELLAN_LOG_LEVEL_FATAL, LOG_TAG, "exception while processing new talkgroup json");
+    }
 }
 
 void onModifiedTalkgroups(const char * _Nonnull modifiedTalkgroupsJson, const void * _Nullable userData)
 {
-    magellanLogMessage(MAGELLAN_LOG_LEVEL_INFORMATIONAL, LOG_TAG, modifiedTalkgroupsJson);
+    try
+    {
+        std::vector<Magellan::DataModel::Talkgroup> tga = nlohmann::json::parse(modifiedTalkgroupsJson);
+
+        for(std::vector<Magellan::DataModel::Talkgroup>::iterator itr = tga.begin();
+            itr != tga.end();
+            itr++)
+        {
+            char buff[1024];
+
+            std::map<std::string, Magellan::DataModel::Talkgroup>::iterator itrFnd = m_talkgroups.find(itr->id);
+            if(itrFnd == m_talkgroups.end())
+            {
+                sprintf(buff, "Updated TG: '%s' - '%s' - DOES NOT EXIST",
+                        itr->id.c_str(),
+                        itr->name.c_str());
+
+                magellanLogMessage(MAGELLAN_LOG_LEVEL_FATAL, LOG_TAG, buff);
+            }
+            else
+            {
+                sprintf(buff, "Updated TG: '%s' - '%s'",
+                        itr->id.c_str(),
+                        itr->name.c_str());
+
+                magellanLogMessage(MAGELLAN_LOG_LEVEL_INFORMATIONAL, LOG_TAG, buff);
+            }
+
+            // Always update anyway
+            m_talkgroups[itr->id] = *itr;
+        }
+    }
+    catch(...)
+    {
+        magellanLogMessage(MAGELLAN_LOG_LEVEL_FATAL, LOG_TAG, "exception while processing modified talkgroup json");
+    }    
 }
 
 void onRemovedTalkgroups(const char * _Nonnull removedTalkgroupsJson, const void * _Nullable userData)
 {
-    magellanLogMessage(MAGELLAN_LOG_LEVEL_INFORMATIONAL, LOG_TAG, removedTalkgroupsJson);
+    try
+    {
+        std::vector<std::string> ida = nlohmann::json::parse(removedTalkgroupsJson);
+
+        for(std::vector<std::string>::iterator itr = ida.begin();
+            itr != ida.end();
+            itr++)
+        {
+            char buff[1024];
+
+            std::map<std::string, Magellan::DataModel::Talkgroup>::iterator itrFnd = m_talkgroups.find(*itr);
+            if(itrFnd == m_talkgroups.end())
+            {
+                sprintf(buff, "Removed TG: '%s' - DOES NOT EXIST",
+                        itr->c_str());
+
+                magellanLogMessage(MAGELLAN_LOG_LEVEL_FATAL, LOG_TAG, buff);
+            }
+            else
+            {                
+                sprintf(buff, "Removed TG: '%s' - '%s'",
+                    itr->c_str(),
+                    itrFnd->second.name.c_str());
+
+                magellanLogMessage(MAGELLAN_LOG_LEVEL_INFORMATIONAL, LOG_TAG, buff);     
+
+                m_talkgroups.erase(itrFnd);
+            }
+        }
+    }
+    catch(...)
+    {
+        magellanLogMessage(MAGELLAN_LOG_LEVEL_FATAL, LOG_TAG, "exception while processing removed talkgroup json");
+    }    
 }
 
 bool readInput(char *buff, size_t maxSize)
@@ -273,6 +424,21 @@ bool processCommandBuffer(char *buff)
     {
         return false;
     }
+
+    else if(strcmp(buff, "?") == 0)
+    {
+        showHelp();
+    }    
+
+    else if(strcmp(buff, "clear") == 0)
+    {
+        system("clear");
+    }    
+
+    else if(strcmp(buff, "sg") == 0)
+    {
+        showTalkgroups();
+    }    
 
     return true;
 }
@@ -375,4 +541,48 @@ void runTest3()
     }
 
     printf("ended test3\n");
+}
+
+
+void runTest4()
+{
+    if(m_testLoops <= 0)
+    {
+        m_testLoops = 100;
+    }
+
+    printf("starting test4 for %d test loops\n", m_testLoops);
+
+    for(int x = 0; x < m_testLoops; x++)
+    {
+        printf("*********** LOOP %d *************\n", x);
+
+        MagellanToken_t                 t;
+        std::vector<MagellanToken_t>    tokens;
+
+        // MDNS
+        {
+            t = MAGELLAN_NULL_TOKEN;
+            magellanBeginDiscovery(MAGELLAN_MDNS_DISCOVERY_TYPE, &t, DiscoveryHook, nullptr);
+            tokens.push_back(t);
+        }
+
+        // SSDP
+        {
+            t = MAGELLAN_NULL_TOKEN;
+            magellanBeginDiscovery(MAGELLAN_SSDP_DISCOVERY_TYPE, &t, DiscoveryHook, nullptr);
+            tokens.push_back(t);
+        }
+        
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        for(std::vector<MagellanToken_t>::iterator itr = tokens.begin();
+            itr != tokens.end();
+            itr++)
+        {
+            magellanEndDiscovery(*itr);
+        }
+    }
+
+    printf("ended test4\n");
 }

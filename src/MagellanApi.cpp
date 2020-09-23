@@ -18,6 +18,11 @@ MAGELLAN_API int magellanDevTest()
     return 0;
 }
 
+MAGELLAN_API int magellanSetLoggingLevel(int level)
+{
+    return Magellan::Core::setLoggingLevel(level);
+}
+
 MAGELLAN_API int magellanSetLoggingHook(PFN_MAGELLAN_LOGGING_HOOK hookFn)
 {
     return Magellan::Core::setLoggingHook(hookFn);

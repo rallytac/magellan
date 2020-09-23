@@ -440,25 +440,56 @@ namespace Magellan
             p.setDefaultsIfNecessary();
         }
 
+
         //-----------------------------------------------------------
-        JSON_SERIALIZED_CLASS(MagellanConfiguration)
+        JSON_SERIALIZED_CLASS(RestLink)
         /**
-        * @brief Helper class for serializing and deserializing the MagellanConfiguration JSON
+        * @brief Helper class for serializing and deserializing the RestLink JSON
         *
-        * Helper C++ class to serialize and de-serialize MagellanConfiguration JSON
+        * Helper C++ class to serialize and de-serialize RestLink JSON
         *
-        * Example: @include[doc] examples/MagellanConfiguration.json
+        * Example: @include[doc] examples/RestLink.json
         */
-        class MagellanConfiguration : public JsonObjectBase
+        class RestLink : public JsonObjectBase
         {
             IMPLEMENT_JSON_SERIALIZATION()
-            IMPLEMENT_JSON_DOCUMENTATION(MagellanConfiguration)
+            IMPLEMENT_JSON_DOCUMENTATION(RestLink)
 
         public:
             /**
-             * @brief Milliseconds between housekeeper checks
+             * @brief Path to the file containing the client's certificate
              */
-            unsigned long               houseKeeperIntervalMs;
+            std::string                 certFile;
+
+            /**
+             * @brief Password for the certificate file (if any)
+             */
+            std::string                 certPass;
+
+            /**
+             * @brief Path to the file containing the client's private key
+             */
+            std::string                 keyFile;
+
+            /**
+             * @brief Password for the key file (if any)
+             */
+            std::string                 keyPass;
+
+            /**
+             * @brief Path to the file containing the bundle of CA certificate(s) used to verify the peer
+             */
+            std::string                 caBundle;
+
+            /**
+             * @brief Verify the peer
+             */
+            bool                        verifyPeer;
+
+            /**
+             * @brief Verify host name
+             */
+            bool                        verifyHost;
 
             /**
              * @brief Milliseconds between URL status checks
@@ -481,6 +512,98 @@ namespace Magellan
             bool                        abandonUrlsAfterConsecutiveErrors;
 
             /**
+             * @brief Log detail of URL operations
+             */
+            bool                        logUrlOperation;
+            
+
+
+            RestLink()
+            {
+                clear();
+            }
+
+            virtual void clear()
+            {
+                certFile.clear();
+                certPass.clear();
+                keyFile.clear();
+                keyPass.clear();
+                caBundle.clear();
+                verifyPeer = true;
+                verifyHost = true;
+                urlCheckerIntervalMs = 2500;
+                urlRetryIntervalMs = 5000;
+                maxUrlConsecutiveErrors = 50;
+                abandonUrlsAfterConsecutiveErrors = false;
+                logUrlOperation = false;
+            }
+        };
+
+        static void to_json(nlohmann::json& j, const RestLink& p)
+        {
+            j = nlohmann::json{
+                TOJSON_IMPL(certFile),
+                TOJSON_IMPL(certPass),
+                TOJSON_IMPL(keyFile),
+                TOJSON_IMPL(keyPass),
+                TOJSON_IMPL(caBundle),
+                TOJSON_IMPL(verifyPeer),
+                TOJSON_IMPL(verifyHost),
+                TOJSON_IMPL(urlCheckerIntervalMs),
+                TOJSON_IMPL(urlRetryIntervalMs),
+                TOJSON_IMPL(maxUrlConsecutiveErrors),
+                TOJSON_IMPL(abandonUrlsAfterConsecutiveErrors),
+                TOJSON_IMPL(logUrlOperation)
+            };
+        }
+
+        static void from_json(const nlohmann::json& j, RestLink& p)
+        {
+            p.clear();
+            FROMJSON_IMPL(certFile, std::string, EMPTY_STRING);
+            FROMJSON_IMPL(certPass, std::string, EMPTY_STRING);
+            FROMJSON_IMPL(keyFile, std::string, EMPTY_STRING);
+            FROMJSON_IMPL(keyPass, std::string, EMPTY_STRING);
+
+            FROMJSON_IMPL(caBundle, std::string, EMPTY_STRING);
+            FROMJSON_IMPL(verifyPeer, bool, true);
+            FROMJSON_IMPL(verifyHost, bool, true);
+
+            FROMJSON_IMPL(urlCheckerIntervalMs, unsigned long, 2500);
+            FROMJSON_IMPL(urlRetryIntervalMs, unsigned long, 5000);
+            FROMJSON_IMPL(maxUrlConsecutiveErrors, unsigned long, 50);
+            FROMJSON_IMPL(abandonUrlsAfterConsecutiveErrors, bool, false);
+            FROMJSON_IMPL(logUrlOperation, bool, false);
+        }
+
+
+        //-----------------------------------------------------------
+        JSON_SERIALIZED_CLASS(MagellanConfiguration)
+        /**
+        * @brief Helper class for serializing and deserializing the MagellanConfiguration JSON
+        *
+        * Helper C++ class to serialize and de-serialize MagellanConfiguration JSON
+        *
+        * Example: @include[doc] examples/MagellanConfiguration.json
+        */
+        class MagellanConfiguration : public JsonObjectBase
+        {
+            IMPLEMENT_JSON_SERIALIZATION()
+            IMPLEMENT_JSON_DOCUMENTATION(MagellanConfiguration)
+
+        public:
+            /**
+             * @brief Milliseconds between housekeeper checks
+             */
+            unsigned long               houseKeeperIntervalMs;
+
+            /**
+             * @brief REST interface
+             */
+            RestLink                    restLink;
+
+            /**
              * @brief MDNS-specific configuration
              */
             Mdns                        mdns;
@@ -498,10 +621,7 @@ namespace Magellan
             virtual void clear()
             {
                 houseKeeperIntervalMs = 5000;
-                urlCheckerIntervalMs = 2500;
-                urlRetryIntervalMs = 5000;
-                maxUrlConsecutiveErrors = 50;
-                abandonUrlsAfterConsecutiveErrors = false;
+                restLink.clear();
                 ssdp.clear();
                 mdns.clear();
             }
@@ -511,10 +631,7 @@ namespace Magellan
         {
             j = nlohmann::json{
                 TOJSON_IMPL(houseKeeperIntervalMs),
-                TOJSON_IMPL(urlCheckerIntervalMs),
-                TOJSON_IMPL(urlRetryIntervalMs),
-                TOJSON_IMPL(maxUrlConsecutiveErrors),
-                TOJSON_IMPL(abandonUrlsAfterConsecutiveErrors),
+                TOJSON_IMPL(restLink),
                 TOJSON_IMPL(ssdp),
                 TOJSON_IMPL(mdns)
             };
@@ -524,10 +641,7 @@ namespace Magellan
         {
             p.clear();
             FROMJSON_IMPL(houseKeeperIntervalMs, unsigned long, 5000);
-            FROMJSON_IMPL(urlCheckerIntervalMs, unsigned long, 2500);
-            FROMJSON_IMPL(urlRetryIntervalMs, unsigned long, 5000);
-            FROMJSON_IMPL(maxUrlConsecutiveErrors, unsigned long, 50);
-            FROMJSON_IMPL(abandonUrlsAfterConsecutiveErrors, bool, false);
+            FROMJSON_IMPL_SIMPLE(restLink);
             FROMJSON_IMPL_SIMPLE(ssdp);
             FROMJSON_IMPL_SIMPLE(mdns);
         }
@@ -1050,6 +1164,11 @@ namespace Magellan
 
         public:
             /**
+             * @brief Magellan-assigned key of the device providing the talkgroup
+             */
+            std::string                             deviceKey;
+
+            /**
              * @brief ID of the talk group
              */
             std::string                             id;
@@ -1112,6 +1231,7 @@ namespace Magellan
 
             virtual void clear()
             {
+                deviceKey.clear();
                 id.clear();
                 type = 0;
                 name.clear();
@@ -1127,7 +1247,8 @@ namespace Magellan
 
             virtual bool matches(Talkgroup& other)
             {
-                if( id.compare(other.id) == 0 &&
+                if( deviceKey.compare(other.deviceKey) == 0 &&
+                    id.compare(other.id) == 0 &&
                     type == other.type &&
                     name.compare(other.name) == 0 &&
                     cryptoPassword.compare(other.cryptoPassword) == 0 &&
@@ -1161,6 +1282,7 @@ namespace Magellan
         static void to_json(nlohmann::json& j, const Talkgroup& p)
         {
             j = nlohmann::json{
+                TOJSON_IMPL(deviceKey),
                 TOJSON_IMPL(id),
                 TOJSON_IMPL(type),
                 TOJSON_IMPL(name),
@@ -1178,7 +1300,9 @@ namespace Magellan
         static void from_json(const nlohmann::json& j, Talkgroup& p)
         {
             p.clear();
+            FROMJSON_IMPL(deviceKey, std::string, EMPTY_STRING);
             FROMJSON_IMPL(id, std::string, EMPTY_STRING);
+            FROMJSON_IMPL(name, std::string, EMPTY_STRING);
             FROMJSON_IMPL(type, int, 0);
             FROMJSON_IMPL(cryptoPassword, std::string, EMPTY_STRING);
             getOptional<Presence>("presence", p.presence, j);

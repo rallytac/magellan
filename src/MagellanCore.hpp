@@ -17,7 +17,9 @@ namespace Magellan
     namespace Core
     {
         ILogger *getLogger();
+        int setLoggingLevel(int level);
         int setLoggingHook(PFN_MAGELLAN_LOGGING_HOOK hookFn);
+        
         uint64_t getNowMs();
 
         int initialize(const char *configuration);

@@ -1,0 +1,38 @@
+{
+   "restLink":
+   {
+      "certFile":"../certs/client.crt",
+      "certPass":"",
+      "keyFile":"../certs/client.key",
+      "keyPass":"",
+      "caBundle":"../certs/ca.crt",
+      "verifyPeer":true,
+      "verifyHost":false,
+      "logUrlOperation":false,
+      "abandonUrlsAfterConsecutiveErrors": false,
+      "urlCheckerIntervalMs":2500,
+      "urlRetryIntervalMs":5000,
+      "houseKeeperIntervalMs": 5000,
+      "maxUrlConsecutiveErrors": 50
+   },
+
+   "mdns":
+   {
+      "serviceType": "_magellan._tcp"
+   },
+
+   "ssdp":
+   {
+      "listener":
+      {
+         "address": "239.255.255.250",
+         "port": 1900
+      },
+      "maxReconnectMs": 10000,
+      "mx": 5,
+      "st": "urn:rallytac-magellan:device:Gateway:1",
+      "xxx_st": "ssdp:all",
+      "userAgent":""
+   }
+}
+

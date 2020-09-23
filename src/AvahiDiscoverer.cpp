@@ -292,13 +292,14 @@ namespace Magellan
                         curr = curr->next;
                     }
 
+                    // Note, HTTPS is assumed
                     if(port > 0)
                     {
-                        sprintf(buff, "http://%s:%d/config", hostName, port);
+                        sprintf(buff, "https://%s:%d/config", hostName, port);
                     }
                     else
                     {
-                        sprintf(buff, "http://%s/config", hostName);
+                        sprintf(buff, "https://%s/config", hostName);
                     }
                     
                     dd->rootUrl.assign(buff);

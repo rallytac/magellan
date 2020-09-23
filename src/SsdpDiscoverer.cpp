@@ -2,6 +2,8 @@
 //  Copyright (c) 2020 Rally Tactical Systems, Inc.
 //  All rights reserved.
 //
+// Portions derived from the LSSDP repository @ https://github.com/zlargon/lssdp
+//
 
 #include <unistd.h>
 #include <string.h>
@@ -18,23 +20,10 @@
 
 namespace Magellan
 {
-    /* Struct : lssdp_nbr */
-    #define LSSDP_FIELD_LEN         128
-    #define LSSDP_LOCATION_LEN      256
+    static const int DEFAULT_TIMEOUT_SECS = 300;
 
-    typedef struct lssdp_nbr 
-    {
-        char            usn         [LSSDP_FIELD_LEN];          // Unique Service Name (Device Name or MAC)
-        char            location    [LSSDP_LOCATION_LEN];       // URL or IP(:Port)
-
-        /* Additional SSDP Header Fields */
-        char            sm_id       [LSSDP_FIELD_LEN];
-        char            device_type [LSSDP_FIELD_LEN];
-        long long       update_time;
-        struct lssdp_nbr * next;
-    } lssdp_nbr;
-
-
+    #define LSSDP_FIELD_LEN             128
+    #define LSSDP_LOCATION_LEN          256
     #define LSSDP_INTERFACE_NAME_LEN    16                      // IFNAMSIZ
     #define LSSDP_INTERFACE_LIST_SIZE   16
     #define LSSDP_IP_LEN                16
@@ -47,7 +36,6 @@ namespace Magellan
         response
     } SsdpMethod_t;
 
-    /** Struct: lssdp_packet **/
     typedef struct lssdp_packet 
     {
         SsdpMethod_t    method;
@@ -294,7 +282,6 @@ namespace Magellan
                 {
                     if(errno == EAGAIN)
                     {
-                        //Core::getLogger()->d(TAG, "recvfrom() timeout");
                         continue;
                     }
 
@@ -306,7 +293,6 @@ namespace Magellan
                 errCount = 0;
 
                 buffer[rc] = 0;
-                //Core::getLogger()->d(TAG, "-------------------\n%s", buffer);
 
                 DataModel::DiscoveredDevice    *dd = parseMessage(buffer);
                 if(dd != nullptr)
@@ -392,19 +378,25 @@ namespace Magellan
         return 0;
     }    
 
-    static ssize_t get_colon_index(const char *string, ssize_t start, ssize_t end) 
+    static ssize_t get_first_occurance_index(char ch, const char *string, ssize_t start, ssize_t end) 
     {
         ssize_t i;
 
         for (i = start; i <= end; i++) 
         {
-            if (string[i] == ':') 
+            if (string[i] == ch) 
             {
                 return i;
             }
         }
 
         return -1;
+    }
+
+
+    static ssize_t get_colon_index(const char *string, ssize_t start, ssize_t end) 
+    {
+        return get_first_occurance_index(':', string, start, end);
     }
 
     static bool splitIt(const char *fieldName, const char *field, size_t field_len, const char *value, size_t value_len, char *dst)
@@ -420,7 +412,6 @@ namespace Magellan
 
     static int parse_field_line(const char *data, ssize_t start, ssize_t end, lssdp_packet * packet) 
     {
-        // 1. find the colon
         if (data[start] == ':') 
         {
             Core::getLogger()->w(TAG, "the first character of line should not be colon");
@@ -440,12 +431,10 @@ namespace Magellan
 
         if (colon == end) 
         {
-            // value is empty
             return -1;
         }
 
 
-        // 2. get field, field_len
         ssize_t i = start;
         ssize_t j = colon - 1;
         if (trim_spaces(data, &i, &j) == -1) 
@@ -457,7 +446,6 @@ namespace Magellan
         ssize_t field_len = j - i + 1;
 
 
-        // 3. get value, value_len
         i = colon + 1;
         j = end;
         if (trim_spaces(data, &i, &j) == -1) 
@@ -468,7 +456,6 @@ namespace Magellan
         const char * value = &data[i];
         ssize_t value_len = j - i + 1;
 
-        // 4. set each field's value to packet
         if(splitIt("st", field, field_len, value, value_len, packet->st)) return 0;     // NT and ST are the same
         if(splitIt("nt", field, field_len, value, value_len, packet->st)) return 0;     // NT and ST are the same
         if(splitIt("usn", field, field_len, value, value_len, packet->usn)) return 0;
@@ -483,7 +470,6 @@ namespace Magellan
         if(splitIt("x-magellan-cv", field, field_len, value, value_len, packet->x_magellan_cv)) return 0;
         if(splitIt("x-magellan-id", field, field_len, value, value_len, packet->x_magellan_id)) return 0;
 
-        // the field is not in the struct packet
         return 0;
     }    
 
@@ -494,8 +480,6 @@ namespace Magellan
             Core::getLogger()->e(TAG, "data should not be NULL");
             return nullptr;
         }
-
-        //Core::getLogger()->i(TAG, "%s", msg);
 
         size_t msgLen = strlen(msg);
 
@@ -540,7 +524,6 @@ namespace Magellan
 
         if(strcasecmp(packet.st, _configuration.st.c_str()) != 0)
         {
-            //Core::getLogger()->d(TAG, "non-matching ST '%s' - ignoring", packet.st);
             return nullptr;
         }
 
@@ -584,9 +567,31 @@ namespace Magellan
             nd = &(itr->second);
         }
 
-        // TODO: get expiration from cache-control header
-        nd->_expiresAt = (Core::getNowMs() + 5000);
-        
+        // Expire after DEFAULT_TIMEOUT_SECS by default
+        nd->_expiresAt = (Core::getNowMs() + (DEFAULT_TIMEOUT_SECS * 1000));
+
+        // Now, see if we got a timeout from the device
+        {
+            char *p = strchr(packet.cache_control, '=');
+            if(p != nullptr)
+            {
+                p++;
+                while(*p != 0 && isspace(*p))
+                {
+                    p++;
+                }
+
+                if(*p != 0)
+                {
+                    int ccval = atoi(p);
+                    if(ccval > 0)
+                    {
+                        nd->_expiresAt = (Core::getNowMs() + (ccval * 1000));
+                    }
+                }
+            }
+        }
+
         if(!needsProcessing)
         {
             if(nd->_version != (unsigned long)atol(packet.x_magellan_cv))
@@ -599,7 +604,6 @@ namespace Magellan
         
         if(!needsProcessing)
         {
-            //Core::getLogger()->d(TAG, "cached neighbor - '%s'", key);
             return nullptr;
         }
 

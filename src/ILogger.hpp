@@ -44,15 +44,30 @@ namespace Magellan
         }
 
         /** 
+         * @brief Returns true if the logging level is value 
+         * 
+         * @param level Level to test
+         * 
+         * @see ILogger::Level 
+         **/
+        inline virtual bool isValidLevel(int level)
+        {
+            return (level >= (int) fatal && level <= (int) debug);
+        }
+
+        /** 
          * @brief Set the highest logging level 
          * 
-         * @param maxLevel Maximu level to log out
+         * @param maxLevel Maximum level to log out
          * 
          * @see ILogger::Level 
          **/
         inline virtual void setMaxLevel(Level maxLevel)
         {
-            _maxLevel = maxLevel;
+            if(maxLevel >= fatal && maxLevel <= debug)
+            {
+                _maxLevel = maxLevel;
+            }
         }
 
         /** @brief Return the current logging level **/

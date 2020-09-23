@@ -54,8 +54,20 @@ following:
 
 ```
 \---|
-    |--- src        Contains all source code for the Magellan library
-    |--- samples    Sample applications
-    |--- qa         Quality assurance and testing components
+    |--- src        Contains source code for the Magellan library and test applications
+    |--- mth        Configuration and script to run the Magellan Test Harness (mth)
+    |--- sim        A simulated gateway that supports Magellan
+    |--- certs      X.509 certificates and keys used by mth and the simulator
     |--- doc        Documentation
 ```
+
+>Most directories contain a README file that further describes the contents of that directory.
+
+# Building
+Once you have the above-mentioned development tools in place, you simply need to run the ``build.sh`` script in the ``src`` directory.
+
+```shell
+$ ./build.sh
+```
+
+Artifacts are written to the ``src/.build`` directory.

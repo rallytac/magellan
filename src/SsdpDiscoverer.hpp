@@ -17,7 +17,7 @@
 
 namespace Magellan
 {
-    /** @brief Provides discovery services on Linux systems using SSDP **/
+    /** @brief Provides discovery services on POSIX systems using SSDP **/
     class SsdpDiscoverer : public Discoverer
     {
     public:
