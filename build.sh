@@ -16,4 +16,4 @@ if [ ! -d CMakeFiles ]; then
     cmake "${SRC_ROOT}"
 fi
 
-make
+cmake --build .

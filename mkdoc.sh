@@ -1,0 +1,9 @@
+#!/bin/bash
+
+#
+#  Copyright (c) 2020 Rally Tactical Systems, Inc.
+#  All rights reserved.
+#
+
+cd doc
+doxygen
