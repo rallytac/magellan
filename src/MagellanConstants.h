@@ -6,6 +6,15 @@
 #ifndef MAGELLANCONSTANTS_H
 #define MAGELLANCONSTANTS_H
 
+/**
+ *  @file MagellanConstants.h
+ *  @brief Constants and other pre-defined values.
+ */
+
+/** @brief A NULL value for a Magellan token **/
+#define MAGELLAN_NULL_TOKEN                 nullptr
+
+
 /** @addtogroup resultCodes Magellan Result Codes
  *
  * Result codes are returned by calls to the API functions and most often are related to
@@ -24,6 +33,7 @@ static const int MAGELLAN_RESULT_ALREADY_INITIALIZED = -3;
 /** @brief An unspecified error has occurred */
 static const int MAGELLAN_RESULT_GENERAL_FAILURE = -4;
 /** @} */
+
 
 /** @addtogroup logLevels Magellan Logging Levels
  *
@@ -44,9 +54,14 @@ static const int MAGELLAN_LOG_LEVEL_INFORMATIONAL = 3;
 static const int MAGELLAN_LOG_LEVEL_DEBUG = 4;
 /** @} */
 
-/** @brief A NULL value for a Magellan token **/
-#define MAGELLAN_NULL_TOKEN                 nullptr
 
+/** @addtogroup discoveryTypes Magellan Discovery Types
+ *
+ * Discovery types are unique strings that identify the method by which
+ * discovery of devices is to occur.
+ *
+ *  @{
+ */
 /** @brief MDNS discovery type **/
 #define MAGELLAN_MDNS_DISCOVERY_TYPE                "mdns"
 
@@ -67,6 +82,7 @@ static const int MAGELLAN_LOG_LEVEL_DEBUG = 4;
 
 /** @brief The default Magellan discovery type **/
 #define MAGELLAN_DEFAULT_DISCOVERY_TYPE         MAGELLAN_MDNS_DISCOVERY_TYPE
+/** @} */
 
 /** @addtogroup discoveryFilterCodes Magellan Discovery Filter Codes
  *

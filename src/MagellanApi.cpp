@@ -13,11 +13,6 @@
 #include "MagellanCore.hpp"
 
 // Exposed C API
-MAGELLAN_API int magellanDevTest()
-{
-    return 0;
-}
-
 MAGELLAN_API int magellanSetLoggingLevel(int level)
 {
     return Magellan::Core::setLoggingLevel(level);
@@ -65,9 +60,9 @@ MAGELLAN_API void magellanLogMessage(int level, const char * _Nonnull tag, const
     }
 }
 
-MAGELLAN_API int magellanBeginDiscovery(const char * _Nullable serviceType, MagellanToken_t *pToken, PFN_MAGELLAN_DISCOVERY_FILTER_HOOK hookFn, const void * _Nullable userData)
+MAGELLAN_API int magellanBeginDiscovery(const char * _Nullable discoveryType, MagellanToken_t *pToken, PFN_MAGELLAN_DISCOVERY_FILTER_HOOK hookFn, const void * _Nullable userData)
 {
-    return Magellan::Core::beginDiscovery(serviceType, pToken, hookFn, userData);
+    return Magellan::Core::beginDiscovery(discoveryType, pToken, hookFn, userData);
 }
 
 MAGELLAN_API int magellanEndDiscovery(MagellanToken_t token)
