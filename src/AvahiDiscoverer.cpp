@@ -255,8 +255,6 @@ namespace Magellan
                     json.append("\"serviceType\":\""); json.append(_configuration.serviceType.c_str()); json.append("\"");
                     json.append(",\"implementation\":\""); json.append(getImplementation()); json.append("\"");
                     json.append(",\"name\":\""); json.append(name); json.append("\"");
-                    json.append(",\"type\":\""); json.append(type); json.append("\"");
-                    json.append(",\"domain\":\""); json.append(domain); json.append("\"");
                     json.append(",\"hostName\":\""); json.append(hostName); json.append("\"");
                 json.append("}");
 
@@ -304,34 +302,6 @@ namespace Magellan
                     
                     dd->rootUrl.assign(buff);
 
-                    Core::getLogger()->d(TAG, "{%p} [%s] resolved service '%s' of type '%s' in domain '%s': "
-                                        "%s:%u (%s)"
-                                        ", TXT=%s"
-                                        ", cookie is %u"
-                                        ", is_local: %i"
-                                        ", our_own: %i"
-                                        ", wide_area: %i"
-                                        ", multicast: %i"
-                                        ", cached: %i"
-                                        ", id: %s"
-                                        ", configVersion: %lu"
-                                        ", rootUrl: %s"
-                                        ,
-                                    (void*) this, 
-                                    (filterResponse == MAGELLAN_FILTER_PROCEED) ? "proceeding" : "ignoring",
-                                    name, type, domain,
-                                    hostName, port, a,
-                                    t,
-                                    avahi_string_list_get_service_cookie(txt),
-                                    !!(flags & AVAHI_LOOKUP_RESULT_LOCAL),
-                                    !!(flags & AVAHI_LOOKUP_RESULT_OUR_OWN),
-                                    !!(flags & AVAHI_LOOKUP_RESULT_WIDE_AREA),
-                                    !!(flags & AVAHI_LOOKUP_RESULT_MULTICAST),
-                                    !!(flags & AVAHI_LOOKUP_RESULT_CACHED),
-                                    dd->id.c_str(),
-                                    dd->configVersion,
-                                    dd->rootUrl.c_str());
-                    
                     Core::processDiscoveredDevice(dd);
                 }
                                     
