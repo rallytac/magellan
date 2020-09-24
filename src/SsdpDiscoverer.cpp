@@ -88,7 +88,7 @@ namespace Magellan
     {
         #if defined(WIN32)
             WSACleanup();
-        #endif()
+        #endif
     }
 
     void SsdpDiscoverer::deleteThis()
