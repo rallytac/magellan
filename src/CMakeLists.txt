@@ -54,7 +54,11 @@ endif()
 
 add_library(magellan-static STATIC ${SOURCES})
 
-target_include_directories(magellan-static PRIVATE ./)
+target_include_directories(magellan-static PRIVATE ${CMAKE_SOURCE_DIR})
+
+if(WINDOWS)
+    target_include_directories(magellan-static PRIVATE ${CMAKE_SOURCE_DIR}/bonjour/Win/Include)
+endif()
 
 target_precompile_headers(magellan-static PUBLIC MagellanDataModel.hpp)
 
@@ -65,7 +69,7 @@ add_executable(mth mth.cpp)
 
 target_precompile_headers(mth PUBLIC MagellanDataModel.hpp)
 
-target_include_directories(mth PRIVATE ./)
+target_include_directories(mth PRIVATE ${CMAKE_SOURCE_DIR})
 
 if(LINUX)
     if(SANITIZE)
@@ -76,5 +80,5 @@ if(LINUX)
 endif()
 
 if(WINDOWS)
-    target_link_libraries(mth PRIVATE magellan-static ws2_32)
+    target_link_libraries(mth PRIVATE magellan-static ws2_32 ${CMAKE_SOURCE_DIR}/bonjour/Win/Lib/Win32/dnssd.lib)
 endif()
