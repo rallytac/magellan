@@ -5,11 +5,24 @@
 // Portions derived from the LSSDP repository @ https://github.com/zlargon/lssdp
 //
 
-#include <unistd.h>
+#if defined(WIN32)
+    #include <WinSock2.h>
+	#include <Ws2tcpip.h>
+	#include <mswsock.h>
+
+    #define ssize_t SSIZE_T 
+    #define strncasecmp strnicmp
+    #define strcasecmp stricmp
+#else
+    #include <unistd.h>
+    #include <arpa/inet.h>
+    #include <sys/socket.h>
+    #include <sys/time.h>
+
+    #define closesocket close
+#endif
+
 #include <string.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/time.h>
 #include <time.h>
 #include <inttypes.h>
 
@@ -62,12 +75,20 @@ namespace Magellan
 
     SsdpDiscoverer::SsdpDiscoverer()
     {
+        #if defined(WIN32)
+            WSADATA wsa;
+            WSAStartup(MAKEWORD(2, 2), &wsa);
+        #endif
+
         setImplementation("Ssdp");
         _running = false;
     }
 
     SsdpDiscoverer::~SsdpDiscoverer()
     {
+        #if defined(WIN32)
+            WSACleanup();
+        #endif()
     }
 
     void SsdpDiscoverer::deleteThis()
@@ -145,7 +166,7 @@ namespace Magellan
 
             if(sock != 0)
             {
-                close(sock);
+                closesocket(sock);
                 sock = 0;
             }
 
@@ -301,13 +322,13 @@ namespace Magellan
                 }
             }
 
-            close(sock);
+            closesocket(sock);
             sock = 0;
         }
 
         if(sock != 0)
         {
-            close(sock);
+            closesocket(sock);
         }
 
         for(NeighborMap_t::iterator itr = _neighbors.begin();

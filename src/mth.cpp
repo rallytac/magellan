@@ -185,13 +185,23 @@ void showTalkgroups()
 
 void loggingHook(int level, const char * tag, const char *msg)
 {
-    static const char *COLOR_ERROR = "\033[31;1m";
-    static const char *COLOR_DEBUG = "\033[37m";
-    static const char *COLOR_INFO = "\033[32;1m";
-    static const char *COLOR_WARNING = "\033[33;1m";
-    static const char *COLOR_FATAL = "\033[37;1;41m";
+    #if defined(WIN32)
+        static const char *COLOR_ERROR = "";
+        static const char *COLOR_DEBUG = "";
+        static const char *COLOR_INFO = "";
+        static const char *COLOR_WARNING = "";
+        static const char *COLOR_FATAL = "";
 
-    static const char *ANSI_RESET = "\033[0m";
+        static const char *ANSI_RESET = "";
+    #else
+        static const char *COLOR_ERROR = "\033[31;1m";
+        static const char *COLOR_DEBUG = "\033[37m";
+        static const char *COLOR_INFO = "\033[32;1m";
+        static const char *COLOR_WARNING = "\033[33;1m";
+        static const char *COLOR_FATAL = "\033[37;1;41m";
+
+        static const char *ANSI_RESET = "\033[0m";
+    #endif
 
     int millisec;
     struct tm tm_info;

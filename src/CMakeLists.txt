@@ -14,19 +14,25 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     set(LINUX true)
 endif()
 
-add_compile_options(-Wall 
-                    -Werror
-                    -fPIC
-                    -Wno-strict-aliasing
-                    -Wno-unused-value
-                    -fvisibility=hidden
-                    -O0 
-                    -ggdb 
-                    -pedantic)
+if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    set(WINDOWS true)
+endif()
 
-if(SANITIZE)
-    add_compile_options(-fsanitize=address
-                        -fno-omit-frame-pointer)                    
+if(LINUX)
+    add_compile_options(-Wall 
+                        -Werror
+                        -fPIC
+                        -Wno-strict-aliasing
+                        -Wno-unused-value
+                        -fvisibility=hidden
+                        -O0 
+                        -ggdb 
+                        -pedantic)
+
+    if(SANITIZE)
+        add_compile_options(-fsanitize=address
+                            -fno-omit-frame-pointer)                    
+    endif()
 endif()
 
 #------------------------------------------------
@@ -37,12 +43,13 @@ set(SOURCES MagellanCore.cpp
             WorkQueue.cpp
             SimpleLogger.cpp
             ReferenceCountedObject.cpp
-            AppDiscoverer.cpp
-            SsdpDiscoverer.cpp
+            AppDiscoverer.cpp            
             TimerManager.cpp)
 
 if(LINUX)
-    set(SOURCES ${SOURCES} AvahiDiscoverer.cpp)
+    set(SOURCES ${SOURCES} AvahiDiscoverer.cpp SsdpDiscoverer.cpp)
+else()
+    set(SOURCES ${SOURCES} BonjourDiscoverer.cpp UpnpDiscoverer.cpp)
 endif()    
 
 add_library(magellan-static STATIC ${SOURCES})
@@ -56,6 +63,8 @@ target_precompile_headers(magellan-static PUBLIC MagellanDataModel.hpp)
 #------------------------------------------------
 add_executable(mth mth.cpp)
 
+target_precompile_headers(mth PUBLIC MagellanDataModel.hpp)
+
 target_include_directories(mth PRIVATE ./)
 
 if(LINUX)
@@ -64,4 +73,8 @@ if(LINUX)
     endif()
 
     target_link_libraries(mth PRIVATE magellan-static avahi-client avahi-common pthread curl ssl crypto)
+endif()
+
+if(WINDOWS)
+    target_link_libraries(mth PRIVATE magellan-static ws2_32)
 endif()
