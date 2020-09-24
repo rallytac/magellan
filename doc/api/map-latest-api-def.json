@@ -98,7 +98,8 @@
           },
           "cryptoPassword" : {
             "type" : "string",
-            "description" : "Password to be used for encryption. Note that this is not the encryption key.  Rather, it is the binary crypto material to be used as part of the input to a PBKDF2 algorithm for generating the symmetric encryption key.  As this value is binary, it is represented here in hexidecimal format with every two hex characters representing a single binary byte."
+            "description" : "Password to be used for encryption. Note that this is not the encryption key.  Rather, it is the binary crypto material to be used as part of the input to a PBKDF2 algorithm for generating the symmetric encryption key.  As this value is binary, it is represented here in hexidecimal format with every two hex characters representing a single binary byte.",
+            "example" : "ABCDEF010203040506070809"
           },
           "presence" : {
             "description" : "Specifies how presence should be handled",
@@ -324,7 +325,7 @@
               }
             }
           },
-          "talkGroups" : {
+          "talkgroups" : {
             "type" : "array",
             "description" : "A list of talk groups that can use used on the gateway",
             "items" : {
