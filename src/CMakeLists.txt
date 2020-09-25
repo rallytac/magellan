@@ -44,12 +44,13 @@ set(SOURCES MagellanCore.cpp
             SimpleLogger.cpp
             ReferenceCountedObject.cpp
             AppDiscoverer.cpp            
-            TimerManager.cpp)
+            TimerManager.cpp
+            SsdpDiscoverer.cpp)
 
 if(LINUX)
-    set(SOURCES ${SOURCES} AvahiDiscoverer.cpp SsdpDiscoverer.cpp)
+    set(SOURCES ${SOURCES} AvahiDiscoverer.cpp)
 else()
-    set(SOURCES ${SOURCES} BonjourDiscoverer.cpp UpnpDiscoverer.cpp)
+    set(SOURCES ${SOURCES} BonjourDiscoverer.cpp)
 endif()    
 
 add_library(magellan-static STATIC ${SOURCES})
@@ -57,7 +58,10 @@ add_library(magellan-static STATIC ${SOURCES})
 target_include_directories(magellan-static PRIVATE ${CMAKE_SOURCE_DIR})
 
 if(WINDOWS)
-    target_include_directories(magellan-static PRIVATE ${CMAKE_SOURCE_DIR}/bonjour/Win/Include)
+    target_include_directories(magellan-static PRIVATE 
+                                ${CMAKE_SOURCE_DIR}/bonjour/Win/Include
+                                ${CMAKE_SOURCE_DIR}/curl/win
+                                )
 endif()
 
 target_precompile_headers(magellan-static PUBLIC MagellanDataModel.hpp)
@@ -80,5 +84,11 @@ if(LINUX)
 endif()
 
 if(WINDOWS)
-    target_link_libraries(mth PRIVATE magellan-static ws2_32 ${CMAKE_SOURCE_DIR}/bonjour/Win/Lib/Win32/dnssd.lib)
+    target_link_libraries(mth PRIVATE 
+                                magellan-static 
+                                ws2_32 
+                                crypt32 
+                                wldap32 
+                                ${CMAKE_SOURCE_DIR}/curl/win/lib/x86/libcurl.lib
+                                ${CMAKE_SOURCE_DIR}/bonjour/Win/Lib/Win32/dnssd.lib)
 endif()

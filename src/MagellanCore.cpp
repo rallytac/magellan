@@ -11,14 +11,10 @@
 #include <inttypes.h>
 
 #if defined(WIN32)
-    #undef  HAVE_CURL
-#else
-    #define HAVE_CURL   0
+    #define CURL_STATICLIB
 #endif
 
-#if defined(HAVE_CURL)
-    #include <curl/curl.h>
-#endif
+#include <curl/curl.h>
 
 #include "MagellanCore.hpp"
 #include "MagellanDataModel.hpp"
@@ -28,14 +24,11 @@
 
 #if defined(WIN32)
     #include "BonjourDiscoverer.hpp"
-    #include "UpnpDiscoverer.hpp"
 #else
     #include "AvahiDiscoverer.hpp"
-    #include "SsdpDiscoverer.hpp"
 #endif
 
-
-//#include <openssl/ssl.h>
+#include "SsdpDiscoverer.hpp"
 
 namespace Magellan
 {
@@ -229,9 +222,7 @@ namespace Magellan
             m_downloadWorkQueue->start();
             m_timerManager->start();
 
-            #if defined(HAVE_CURL)
-                curl_global_init(CURL_GLOBAL_ALL);
-            #endif
+            curl_global_init(CURL_GLOBAL_ALL);
 
             m_tmrHouseKeeper = m_timerManager->setTimer(tmrCbHouseKeeper, nullptr, m_configuration.houseKeeperIntervalMs, true);
             m_tmrUrlChecker = m_timerManager->setTimer(tmrCbUrlChecker, nullptr, m_configuration.restLink.urlCheckerIntervalMs, true);
@@ -258,9 +249,7 @@ namespace Magellan
 
             m_timerManager->stop();
 
-            #if defined(HAVE_CURL)
-                curl_global_cleanup();
-            #endif
+            curl_global_cleanup();
 
             m_downloadWorkQueue->stop();
             m_mainWorkQueue->stop();
@@ -479,92 +468,85 @@ namespace Magellan
                 DataModel::DeviceConfiguration      _dc;
         };
 
-        #if defined(HAVE_CURL)
-            static size_t curlCbDataToDeviceConfiguration(void *ptr, size_t size, size_t nmemb, void *userData)
-            {
-                DeviceConfigurationDownloadCtx *ctx = (DeviceConfigurationDownloadCtx*)userData;
-                //getLogger()->d(TAG, "curlCbDataToDeviceConfiguration: ptr=%p, size=%zu, nmemb=%zu, ctx=%p", ptr, size, nmemb, (void*)ctx);
+        static size_t curlCbDataToDeviceConfiguration(void *ptr, size_t size, size_t nmemb, void *userData)
+        {
+            DeviceConfigurationDownloadCtx *ctx = (DeviceConfigurationDownloadCtx*)userData;
+            //getLogger()->d(TAG, "curlCbDataToDeviceConfiguration: ptr=%p, size=%zu, nmemb=%zu, ctx=%p", ptr, size, nmemb, (void*)ctx);
 
-                std::string tmp;
+            std::string tmp;
 
-                tmp.assign((char*)ptr, size*nmemb);
-                ctx->_ok = ctx->_dc.deserialize(tmp.c_str());
+            tmp.assign((char*)ptr, size*nmemb);
+            ctx->_ok = ctx->_dc.deserialize(tmp.c_str());
 
-                return (size * nmemb);
-            }
+            return (size * nmemb);
+        }
 
-            void doUrlDownload(const char *url, const char *discovererKey)
-            {
-                getLogger()->d(TAG, "doUrlDownload from %s for %s", url, discovererKey);
+        void doUrlDownload(const char *url, const char *discovererKey)
+        {
+            getLogger()->d(TAG, "doUrlDownload from %s for %s", url, discovererKey);
 
-                CURL *curl_handle;
-                CURLcode cc;
+            CURL *curl_handle;
+            CURLcode cc;
 
-                DeviceConfigurationDownloadCtx *dcctx = new DeviceConfigurationDownloadCtx();
+            DeviceConfigurationDownloadCtx *dcctx = new DeviceConfigurationDownloadCtx();
 
-                curl_handle = curl_easy_init();
+            curl_handle = curl_easy_init();
 
-                curl_easy_setopt(curl_handle, CURLOPT_URL, url);
-                curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, (m_configuration.restLink.logUrlOperation ? 1L : 0L));
-                curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L);
+            curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+            curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, (m_configuration.restLink.logUrlOperation ? 1L : 0L));
+            curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L);
 
-                curl_easy_setopt(curl_handle, CURLOPT_SSLCERT, m_configuration.restLink.certFile.c_str());
-                curl_easy_setopt(curl_handle, CURLOPT_SSLCERTPASSWD, m_configuration.restLink.certPass.c_str());
+            curl_easy_setopt(curl_handle, CURLOPT_SSLCERT, m_configuration.restLink.certFile.c_str());
+            curl_easy_setopt(curl_handle, CURLOPT_SSLCERTPASSWD, m_configuration.restLink.certPass.c_str());
 
-                curl_easy_setopt(curl_handle, CURLOPT_SSLKEY, m_configuration.restLink.keyFile.c_str());
-                curl_easy_setopt(curl_handle, CURLOPT_SSLKEYPASSWD, m_configuration.restLink.keyPass.c_str());
+            curl_easy_setopt(curl_handle, CURLOPT_SSLKEY, m_configuration.restLink.keyFile.c_str());
+            curl_easy_setopt(curl_handle, CURLOPT_SSLKEYPASSWD, m_configuration.restLink.keyPass.c_str());
 
-                curl_easy_setopt(curl_handle, CURLOPT_CAINFO, m_configuration.restLink.caBundle.c_str());
+            curl_easy_setopt(curl_handle, CURLOPT_CAINFO, m_configuration.restLink.caBundle.c_str());
 
-                curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, (m_configuration.restLink.verifyPeer ? 1L : 0L));
-                curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, (m_configuration.restLink.verifyHost ? 1L : 0L));
+            curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, (m_configuration.restLink.verifyPeer ? 1L : 0L));
+            curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, (m_configuration.restLink.verifyHost ? 1L : 0L));
 
-                curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, dcctx);
-                curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, curlCbDataToDeviceConfiguration);
+            curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, dcctx);
+            curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, curlCbDataToDeviceConfiguration);
 
-                cc = curl_easy_perform(curl_handle);
+            cc = curl_easy_perform(curl_handle);
 
-                curl_easy_cleanup(curl_handle);
+            curl_easy_cleanup(curl_handle);
 
-                std::string l_discovererKey = discovererKey;
+            std::string l_discovererKey = discovererKey;
 
-                dcctx->_dc.discovererKey = discovererKey;
+            dcctx->_dc.discovererKey = discovererKey;
 
-                m_mainWorkQueue->submit(([cc, dcctx, l_discovererKey]()
-                {            
-                    DeviceMap_t::iterator itr = m_devices.find(l_discovererKey);
-                    if(itr != m_devices.end())
+            m_mainWorkQueue->submit(([cc, dcctx, l_discovererKey]()
+            {            
+                DeviceMap_t::iterator itr = m_devices.find(l_discovererKey);
+                if(itr != m_devices.end())
+                {
+                    DeviceTracker *dt = &itr->second;
+
+                    if(cc != CURLE_OK)
                     {
-                        DeviceTracker *dt = &itr->second;
-
-                        if(cc != CURLE_OK)
-                        {
-                            getLogger()->e(TAG, "curl error %d (%s) for device %s", (int)cc, curl_easy_strerror(cc), l_discovererKey.c_str());
-                        }
-
-                        for(std::vector<DataModel::Talkgroup>::iterator itr = dcctx->_dc.talkgroups.begin();
-                            itr != dcctx->_dc.talkgroups.end();
-                            itr++)
-                        {
-                            itr->deviceKey.assign(l_discovererKey); 
-                        }
-
-                        processDeviceConfiguration(l_discovererKey.c_str(), dt, &dcctx->_dc, (cc == CURLE_OK) ? false : true);
+                        getLogger()->e(TAG, "curl error %d (%s) for device %s", (int)cc, curl_easy_strerror(cc), l_discovererKey.c_str());
                     }
-                    else
-                    {
-                        getLogger()->e(TAG, "did not find device '%s' after configuration download", l_discovererKey.c_str());
-                    }                
 
-                    delete dcctx;
-                }));
-            }
-        #else
-            void doUrlDownload(const char *url, const char *discovererKey)
-            {
-                getLogger()->f(TAG, "Implementation required for URL download");
-            }
-        #endif
+                    for(std::vector<DataModel::Talkgroup>::iterator itr = dcctx->_dc.talkgroups.begin();
+                        itr != dcctx->_dc.talkgroups.end();
+                        itr++)
+                    {
+                        itr->deviceKey.assign(l_discovererKey); 
+                    }
+
+                    processDeviceConfiguration(l_discovererKey.c_str(), dt, &dcctx->_dc, (cc == CURLE_OK) ? false : true);
+                }
+                else
+                {
+                    getLogger()->e(TAG, "did not find device '%s' after configuration download", l_discovererKey.c_str());
+                }                
+
+                delete dcctx;
+            }));
+        }
 
         Discoverer *addDiscoverer(const char *discoveryType, PFN_MAGELLAN_DISCOVERY_FILTER_HOOK hookFn, const void *userData)
         {
@@ -582,12 +564,7 @@ namespace Magellan
             }
             else if(strcmp(discoveryType, MAGELLAN_SSDP_DISCOVERY_TYPE) == 0 )
             {
-                #if defined(WIN32)
-                    disco = new UpnpDiscoverer();
-                #else
-                    disco = new SsdpDiscoverer();
-                #endif
-
+                disco = new SsdpDiscoverer();
                 disco->configure(m_configuration.ssdp);
             }
             
