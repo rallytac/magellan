@@ -25,6 +25,15 @@ Furthermore, Magellan provides for encryption of the two-way radio traffic on th
 ### MAP
 The above-described capability is implemented using JSON-based messages exchanged between user devices and gateways. These messages are secured with TLS on unicast and, if needed, DTLS in multicast environments. The combined protocol set is known as the ``Magellan Asset Protocol`` or ``MAP`` for short.
 
+### Sequence Of Operation
+At a high level, the sequence of operation is:
+1. Discovery of the asset/gateway
+2. Interrogation of the asset/gateway.
+
+![](doc/MAP-Sequence-diagram.png)
+
+Once these two steps are complete, the application atop the Magellan library has all tne information necessary to decide which talkgroups to use and how to communicate on them.
+
 ### Key Magellan Requirements & Elements
 Key high-level elements and requirements for Magellan are as follows:
 - **Asset Advertisement**: Advertisement utilizes industry-accepted protocols such as SSDP and mDNS/Bonjour/Avahi/NSD. These are well-known and proven protocols, have numerous stable implementations, and are incorporated into almost every operating platform in the market.
@@ -37,6 +46,17 @@ Key high-level elements and requirements for Magellan are as follows:
 - **Operating Systems and CPU Architectures**:  Magellan is POSIX-compliant and capable of being built for and running on standard desktop environments such as Microsoft Windows, Apple macOS, and common distributions of Linux. Magellan is also be for Android and Apple iOS platforms as well as select Linux-based embedded platforms. The platform support X86 32- and 64-bit CPU architectures as well as 32- and 64-bit ARM processors.
 - **Delivery**: Magellan is delivered as pre-compiled binaries for the above-mentioned platforms as well as available in source code form from a publicly-accessible repository on Github. Included in the delivery package is appropriate documentation as well as sample code that third-parties may utilize to develop Magellan-based capabilities into their portfolio.
 - **Review Process**: In addition to on-going development and design between the Magellen development team and a select group of practitioner representives, personnel; it is envisioned that the design and implementation methodology for Magellan will be formally submitted into the ``Request For Comments`` (RFC) process.
+
+### Network Traffic Reduction & Optimizations
+In order to reduce network traffic for both advertisements and resultant client queries to gateways, Magellan requires that gateway entities include a unique identifier and a configuration version in those advertisements.  The identifier should be assigned by the device, and be permanent in nature - such as a GUID stored inside the device's hardware.  The configiration version is a number that is to be incremented by the device every time a facet of it's configiuration changes that would affect clients.
+
+With MDNS this takes the form of two `TXT Record` elements included in the MDNS announcement:
+- **id**: The unique identifier of the device e.g. ``id="{b7016517-c7ca-456b-90f5-f601ae902eba}"``.
+- **cv**: The configuration version, e.g. ``cv=234``.
+
+Under SSDP, these two elements are included as `X-?` headers in the SSDP message:
+- **X-MAGELLAN-ID**: The unique identifier of the device e.g. ``X-MAGELLAN-ID: {b7016517-c7ca-456b-90f5-f601ae902eba}``.
+- **X-MAGELLAN-CV**: The configuration version, e.g. ``X-MAGELLAN-CV: 234``.
 
 ### Reference Implementation Notes
 1. The reference implementation (`libmagellan`) requires certificate and key files in `PEM` storage format.  Practioners are welcome to modify this requirement to use other formats such as PKCS#12.
