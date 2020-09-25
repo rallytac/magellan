@@ -277,7 +277,42 @@ void loggingHook(int level, const char * tag, const char *msg)
 
     strftime(timeBuff, sizeof(timeBuff), "%Y:%m:%d %H:%M:%S", &tm_info);
 
+    #if defined(WIN32)
+        HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+        CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
+        WORD wOldColorAttrs;
+
+        if (level == MAGELLAN_LOG_LEVEL_ERROR)
+        {
+            SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | FOREGROUND_RED);
+        }
+        else if (level == MAGELLAN_LOG_LEVEL_DEBUG)
+        {
+            SetConsoleTextAttribute(h, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+        }
+        else if (level == MAGELLAN_LOG_LEVEL_INFORMATIONAL)
+        {
+            SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | FOREGROUND_GREEN);
+        }
+        else if (level == MAGELLAN_LOG_LEVEL_WARNING)
+        {
+            SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN);
+        }
+        else if (level == MAGELLAN_LOG_LEVEL_FATAL)
+        {
+            SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_BLUE);
+        }
+
+        GetConsoleScreenBufferInfo(h, &csbiInfo);
+        wOldColorAttrs = csbiInfo.wAttributes;
+    #endif
+
     printf("%s%s - %c/%s %s%s\n", clr, timeBuff, levelChar, tag, msg, ANSI_RESET);
+
+    #if defined(WIN32)
+        SetConsoleTextAttribute(h, wOldColorAttrs);
+    #endif
+
     fflush(stdout);
 }
 
