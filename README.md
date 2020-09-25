@@ -84,7 +84,8 @@ following:
     |--- mth        Configuration and script to run the Magellan Test Harness (mth)
     |--- sim        A simulated gateway that supports Magellan
     |--- certs      X.509 certificates and keys used by mth and the simulator
-    |--- doc        Documentation
+    |--- doc        Documentation for the Magellan library and its API
+    |--- api        Specifications and documentation for the REST API
 ```
 
 >Most directories contain a README file that further describes the contents of that directory.
