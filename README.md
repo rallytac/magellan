@@ -30,6 +30,7 @@ At a high level, the sequence of operation is:
 1. Discovery of the asset/gateway
 2. Interrogation of the asset/gateway.
 
+![](../../MAP-Sequence-diagram.png)
 ![](doc/MAP-Sequence-diagram.png)
 
 Once these two steps are complete, the application atop the Magellan library has all tne information necessary to decide which talkgroups to use and how to communicate on them.
