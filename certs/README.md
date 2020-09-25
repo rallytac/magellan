@@ -2,7 +2,7 @@
 
 The certificates and keys in this directory are used by the simulator (mrs) and the test harness (mth).
 
->**NOTE** Certificates and keys in this directory are for testing and development purposes only.  They are  not to be used in production environments.
+>**WARNING** Certificates and keys in this directory are for testing and development purposes only.  They are  not to be used in production environments.
 
 ## Creating Certificates
 Creating your own set of certificates is straightforward and can be done using `openssl`.  Follow the steps below to setup a certificate authority (CA) of your own and then use that CA cert to create server and client certificates.
