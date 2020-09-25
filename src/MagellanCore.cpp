@@ -496,13 +496,17 @@ namespace Magellan
             curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, (m_configuration.restLink.logUrlOperation ? 1L : 0L));
             curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L);
 
+            curl_easy_setopt(curl_handle, CURLOPT_SSLCERTTYPE, "PEM");
             curl_easy_setopt(curl_handle, CURLOPT_SSLCERT, m_configuration.restLink.certFile.c_str());
             curl_easy_setopt(curl_handle, CURLOPT_SSLCERTPASSWD, m_configuration.restLink.certPass.c_str());
 
+            curl_easy_setopt(curl_handle, CURLOPT_SSLKEYTYPE, "PEM");
             curl_easy_setopt(curl_handle, CURLOPT_SSLKEY, m_configuration.restLink.keyFile.c_str());
-            curl_easy_setopt(curl_handle, CURLOPT_SSLKEYPASSWD, m_configuration.restLink.keyPass.c_str());
-
+            curl_easy_setopt(curl_handle, CURLOPT_SSLKEYPASSWD, m_configuration.restLink.keyPass.c_str());            
+            
             curl_easy_setopt(curl_handle, CURLOPT_CAINFO, m_configuration.restLink.caBundle.c_str());
+
+            curl_easy_setopt(curl_handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NO_REVOKE);
 
             curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, (m_configuration.restLink.verifyPeer ? 1L : 0L));
             curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, (m_configuration.restLink.verifyHost ? 1L : 0L));
