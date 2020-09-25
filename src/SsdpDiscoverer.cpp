@@ -261,7 +261,7 @@ namespace Magellan
 
                 if(setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) != 0)
                 {
-                    Core::getLogger()->e(TAG, "setsockopt(IP_ADD_MEMBERSHIP) failed, err=%u", WSAGetLastError());
+                    Core::getLogger()->e(TAG, "setsockopt(IP_ADD_MEMBERSHIP) failed");
                     errCount++;
                     continue;
                 }
@@ -287,14 +287,12 @@ namespace Magellan
 
             //Core::getLogger()->i(TAG, "sending M-SEARCH '%s'", buffer);                        
 
-            /*
             if(sendto(sock, buffer, strlen(buffer), 0, (struct sockaddr*)&groupSock, sizeof(groupSock)) != (ssize_t)strlen(buffer))
             {
                 Core::getLogger()->e(TAG, "sendto() failed");
                 errCount++;
                 continue;
             }
-            */
     
             while( _running )
             {
@@ -321,7 +319,7 @@ namespace Magellan
                 #if defined(WIN32)
                     nfds = 1;
                 #else
-                    ndfs = fd + 1;
+                    nfds = sock + 1;
                 #endif
 
                 result = select(nfds, &readfds, (fd_set*)nullptr, (fd_set*)&exceptfds, &tv);
