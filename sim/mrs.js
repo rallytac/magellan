@@ -32,29 +32,52 @@ const options = {
 // This is our little REST server.  It responds only to the "/config" REST request by
 // returning the "configContent" from above
 https.createServer(options, function (req, res) {
-	var cert = req.socket.getPeerCertificate();
-	if(cert != undefined) {
-		var subject = cert.subject;
+	// Assume a server-side error
+	var retval = 500;
 
-		if(subject != undefined) {
-			if(req.url == "/config") {		
-				console.log('config request from ' + req.connection.remoteAddress);
-				res.writeHead(200, {'content-type': 'application/json'});
-			  	res.end(configContent);
-		  }
-		  else {
-			console.log('unknown url ' + req.url);
-			  res.writeHead(404);
-		  }	  
+	// Make sure the client is asking us for a URL we know about
+	if(req.url == "/config") {		
+		console.log('config request from ' + req.connection.remoteAddress);
+
+		// See if we're asking for a client certificate and, if so, make sure
+		// we have a subject
+		if(options.requestCert) {
+			var cert = req.socket.getPeerCertificate();
+			if(cert == undefined) {
+				retval = 403;
+				console.log('no client certificate');
+			}
+			else {
+				var subject = cert.subject;
+		
+				if(subject == undefined) {
+					retval = 403;
+					console.log('no subject in client certificate');
+				}
+				else {
+					retval = 200;
+					console.log('   cert: C=' + subject.C 
+									+ ', O=' + subject.O
+									+ ', L=' + subject.L);
+				}
+			}
 		}
 		else {
-			console.log('no subject in client certificate');
-			res.writeHead(403);
+			retval = 200;
 		}
 	}
 	else {
-		console.log('no client certificate');
-		res.writeHead(403);
+		retval = 404;
+		console.log('unknown url ' + req.url);
+	}
+
+	if(retval == 200) {
+		res.writeHead(retval, {'content-type': 'application/json'});
+		res.end(configContent);
+	}
+	else {
+		res.writeHead(retval);		
+		res.end("");
 	}
 }).listen(port);
  
