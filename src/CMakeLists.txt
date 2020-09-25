@@ -14,19 +14,25 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     set(LINUX true)
 endif()
 
-add_compile_options(-Wall 
-                    -Werror
-                    -fPIC
-                    -Wno-strict-aliasing
-                    -Wno-unused-value
-                    -fvisibility=hidden
-                    -O0 
-                    -ggdb 
-                    -pedantic)
+if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    set(WINDOWS true)
+endif()
 
-if(SANITIZE)
-    add_compile_options(-fsanitize=address
-                        -fno-omit-frame-pointer)                    
+if(LINUX)
+    add_compile_options(-Wall 
+                        -Werror
+                        -fPIC
+                        -Wno-strict-aliasing
+                        -Wno-unused-value
+                        -fvisibility=hidden
+                        -O0 
+                        -ggdb 
+                        -pedantic)
+
+    if(SANITIZE)
+        add_compile_options(-fsanitize=address
+                            -fno-omit-frame-pointer)                    
+    endif()
 endif()
 
 #------------------------------------------------
@@ -37,17 +43,26 @@ set(SOURCES MagellanCore.cpp
             WorkQueue.cpp
             SimpleLogger.cpp
             ReferenceCountedObject.cpp
-            AppDiscoverer.cpp
-            SsdpDiscoverer.cpp
-            TimerManager.cpp)
+            AppDiscoverer.cpp            
+            TimerManager.cpp
+            SsdpDiscoverer.cpp)
 
 if(LINUX)
     set(SOURCES ${SOURCES} AvahiDiscoverer.cpp)
+else()
+    set(SOURCES ${SOURCES} BonjourDiscoverer.cpp)
 endif()    
 
 add_library(magellan-static STATIC ${SOURCES})
 
-target_include_directories(magellan-static PRIVATE ./)
+target_include_directories(magellan-static PRIVATE ${CMAKE_SOURCE_DIR})
+
+if(WINDOWS)
+    target_include_directories(magellan-static PRIVATE 
+                                ${CMAKE_SOURCE_DIR}/bonjour/Win/Include
+                                ${CMAKE_SOURCE_DIR}/curl/win
+                                )
+endif()
 
 target_precompile_headers(magellan-static PUBLIC MagellanDataModel.hpp)
 
@@ -56,7 +71,9 @@ target_precompile_headers(magellan-static PUBLIC MagellanDataModel.hpp)
 #------------------------------------------------
 add_executable(mth mth.cpp)
 
-target_include_directories(mth PRIVATE ./)
+target_precompile_headers(mth PUBLIC MagellanDataModel.hpp)
+
+target_include_directories(mth PRIVATE ${CMAKE_SOURCE_DIR})
 
 if(LINUX)
     if(SANITIZE)
@@ -64,4 +81,14 @@ if(LINUX)
     endif()
 
     target_link_libraries(mth PRIVATE magellan-static avahi-client avahi-common pthread curl ssl crypto)
+endif()
+
+if(WINDOWS)
+    target_link_libraries(mth PRIVATE 
+                                magellan-static 
+                                ws2_32 
+                                crypt32 
+                                wldap32 
+                                ${CMAKE_SOURCE_DIR}/curl/win/lib/x86/libcurl.lib
+                                ${CMAKE_SOURCE_DIR}/bonjour/Win/Lib/Win32/dnssd.lib)
 endif()

@@ -38,6 +38,11 @@ Key high-level elements and requirements for Magellan are as follows:
 - **Delivery**: Magellan is delivered as pre-compiled binaries for the above-mentioned platforms as well as available in source code form from a publicly-accessible repository on Github. Included in the delivery package is appropriate documentation as well as sample code that third-parties may utilize to develop Magellan-based capabilities into their portfolio.
 - **Review Process**: In addition to on-going development and design between the Magellen development team and a select group of practitioner representives, personnel; it is envisioned that the design and implementation methodology for Magellan will be formally submitted into the ``Request For Comments`` (RFC) process.
 
+### Reference Implementation Notes
+1. The reference implementation (`libmagellan`) requires certificate and key files in `PEM` storage format.  Practioners are welcome to modify this requirement to use other formats such as PKCS#12.
+
+2. The [curl](https://curl.haxx.se) library is used by `libmagellan` to interact with gateway devices using REST.  On Linux systems, libmagellan uses the standard curl library provided with the Linux distro.  On Windows, the curl implementation is a pre-compiled build using Microsoft's `schannel` module. Practioners are welcome to replace curl with their own implementations.
+
 # Development Tools
 Tools and platforms used in the development and testing of the Magellan software includes the
 following:

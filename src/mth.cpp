@@ -185,13 +185,23 @@ void showTalkgroups()
 
 void loggingHook(int level, const char * tag, const char *msg)
 {
-    static const char *COLOR_ERROR = "\033[31;1m";
-    static const char *COLOR_DEBUG = "\033[37m";
-    static const char *COLOR_INFO = "\033[32;1m";
-    static const char *COLOR_WARNING = "\033[33;1m";
-    static const char *COLOR_FATAL = "\033[37;1;41m";
+    #if defined(WIN32)
+        static const char *COLOR_ERROR = "";
+        static const char *COLOR_DEBUG = "";
+        static const char *COLOR_INFO = "";
+        static const char *COLOR_WARNING = "";
+        static const char *COLOR_FATAL = "";
 
-    static const char *ANSI_RESET = "\033[0m";
+        static const char *ANSI_RESET = "";
+    #else
+        static const char *COLOR_ERROR = "\033[31;1m";
+        static const char *COLOR_DEBUG = "\033[37m";
+        static const char *COLOR_INFO = "\033[32;1m";
+        static const char *COLOR_WARNING = "\033[33;1m";
+        static const char *COLOR_FATAL = "\033[37;1;41m";
+
+        static const char *ANSI_RESET = "\033[0m";
+    #endif
 
     int millisec;
     struct tm tm_info;
@@ -267,7 +277,42 @@ void loggingHook(int level, const char * tag, const char *msg)
 
     strftime(timeBuff, sizeof(timeBuff), "%Y:%m:%d %H:%M:%S", &tm_info);
 
+    #if defined(WIN32)
+        HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+        CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
+        WORD wOldColorAttrs;
+
+        if (level == MAGELLAN_LOG_LEVEL_ERROR)
+        {
+            SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | FOREGROUND_RED);
+        }
+        else if (level == MAGELLAN_LOG_LEVEL_DEBUG)
+        {
+            SetConsoleTextAttribute(h, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+        }
+        else if (level == MAGELLAN_LOG_LEVEL_INFORMATIONAL)
+        {
+            SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | FOREGROUND_GREEN);
+        }
+        else if (level == MAGELLAN_LOG_LEVEL_WARNING)
+        {
+            SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN);
+        }
+        else if (level == MAGELLAN_LOG_LEVEL_FATAL)
+        {
+            SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_BLUE);
+        }
+
+        GetConsoleScreenBufferInfo(h, &csbiInfo);
+        wOldColorAttrs = csbiInfo.wAttributes;
+    #endif
+
     printf("%s%s - %c/%s %s%s\n", clr, timeBuff, levelChar, tag, msg, ANSI_RESET);
+
+    #if defined(WIN32)
+        SetConsoleTextAttribute(h, wOldColorAttrs);
+    #endif
+
     fflush(stdout);
 }
 

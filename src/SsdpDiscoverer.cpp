@@ -5,11 +5,24 @@
 // Portions derived from the LSSDP repository @ https://github.com/zlargon/lssdp
 //
 
-#include <unistd.h>
+#if defined(WIN32)
+    #include <WinSock2.h>
+	#include <Ws2tcpip.h>
+	#include <mswsock.h>
+
+    #define ssize_t SSIZE_T 
+    #define strncasecmp strnicmp
+    #define strcasecmp stricmp
+#else
+    #include <unistd.h>
+    #include <arpa/inet.h>
+    #include <sys/socket.h>
+    #include <sys/time.h>
+
+    #define closesocket close
+#endif
+
 #include <string.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/time.h>
 #include <time.h>
 #include <inttypes.h>
 
@@ -62,12 +75,20 @@ namespace Magellan
 
     SsdpDiscoverer::SsdpDiscoverer()
     {
+        #if defined(WIN32)
+            WSADATA wsa;
+            WSAStartup(MAKEWORD(2, 2), &wsa);
+        #endif
+
         setImplementation("Ssdp");
         _running = false;
     }
 
     SsdpDiscoverer::~SsdpDiscoverer()
     {
+        #if defined(WIN32)
+            WSACleanup();
+        #endif
     }
 
     void SsdpDiscoverer::deleteThis()
@@ -129,7 +150,6 @@ namespace Magellan
         char buffer[BUFF_SZ] = "";
 
         int                 sock = 0;
-	    struct timeval      tv;
 	    struct sockaddr_in  groupSock;
 	    struct sockaddr_in  localSock;
 	    struct ip_mreq      group;
@@ -145,7 +165,7 @@ namespace Magellan
 
             if(sock != 0)
             {
-                close(sock);
+                closesocket(sock);
                 sock = 0;
             }
 
@@ -196,6 +216,7 @@ namespace Magellan
                 }
             }
 
+            /*
             // Receive timeout
             {
 	            tv.tv_sec = 1;
@@ -207,6 +228,7 @@ namespace Magellan
                     continue;
                 }
             }
+            */
 
             // Multicast loopback
             {
@@ -234,7 +256,9 @@ namespace Magellan
 
             // Multicast join
             {
-                group.imr_multiaddr.s_addr = inet_addr(_configuration.listener.address.c_str());
+                memset(&group, 0, sizeof(group));
+                inet_pton(AF_INET, _configuration.listener.address.c_str(), &group.imr_multiaddr);
+
                 if(setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) != 0)
                 {
                     Core::getLogger()->e(TAG, "setsockopt(IP_ADD_MEMBERSHIP) failed");
@@ -261,7 +285,7 @@ namespace Magellan
                         _configuration.mx,
                         _configuration.userAgent.c_str());
 
-            Core::getLogger()->i(TAG, "sending M-SEARCH '%s'", buffer);                        
+            //Core::getLogger()->i(TAG, "sending M-SEARCH '%s'", buffer);                        
 
             if(sendto(sock, buffer, strlen(buffer), 0, (struct sockaddr*)&groupSock, sizeof(groupSock)) != (ssize_t)strlen(buffer))
             {
@@ -274,40 +298,80 @@ namespace Magellan
             {
                 checkNeighbors();
 
+                int nfds;
+                fd_set  readfds;
+                fd_set  exceptfds;
+                struct timeval tv;
+                int result;
+
                 struct sockaddr_in senderAddr;
                 socklen_t slen = sizeof(senderAddr);
 
-                rc = recvfrom(sock, buffer, BUFF_SZ, 0, (struct sockaddr*)&senderAddr, &slen);
-                if(rc <= 0)
-                {
-                    if(errno == EAGAIN)
-                    {
-                        continue;
-                    }
+                FD_ZERO(&readfds);
+                FD_ZERO(&exceptfds);
 
-                    Core::getLogger()->e(TAG, "recvfrom() failed, errno=%d", errno);
+                FD_SET(sock, &readfds);
+                FD_SET(sock, &exceptfds);
+
+                tv.tv_sec = 1;
+                tv.tv_usec = 0;
+
+                #if defined(WIN32)
+                    nfds = 1;
+                #else
+                    nfds = sock + 1;
+                #endif
+
+                result = select(nfds, &readfds, (fd_set*)nullptr, (fd_set*)&exceptfds, &tv);
+                if(result < 0)
+                {
+                    Core::getLogger()->e(TAG, "select() failed, errno=%d", errno);
                     break;
                 }
 
-                // Reset errors to 0 upon first successful receive
-                errCount = 0;
-
-                buffer[rc] = 0;
-
-                DataModel::DiscoveredDevice    *dd = parseMessage(buffer);
-                if(dd != nullptr)
+                if(result> 0)
                 {
-                    Core::processDiscoveredDevice(dd);
+                    if (FD_ISSET(sock, &exceptfds))
+                    {
+                        Core::getLogger()->e(TAG, "socket exception, errno=%d", errno);
+                        break;
+                    }
+
+                    if (FD_ISSET(sock, &readfds))
+                    {
+                        rc = recvfrom(sock, buffer, BUFF_SZ, 0, (struct sockaddr*)&senderAddr, &slen);
+                        if(rc <= 0)
+                        {
+                            if(errno == EAGAIN)
+                            {
+                                continue;
+                            }
+
+                            Core::getLogger()->e(TAG, "recvfrom() failed, errno=%d", errno);
+                            break;
+                        }
+
+                        // Reset errors to 0 upon first successful receive
+                        errCount = 0;
+
+                        buffer[rc] = 0;
+
+                        DataModel::DiscoveredDevice    *dd = parseMessage(buffer);
+                        if(dd != nullptr)
+                        {
+                            Core::processDiscoveredDevice(dd);
+                        }
+                    }
                 }
             }
 
-            close(sock);
+            closesocket(sock);
             sock = 0;
         }
 
         if(sock != 0)
         {
-            close(sock);
+            closesocket(sock);
         }
 
         for(NeighborMap_t::iterator itr = _neighbors.begin();
@@ -614,6 +678,7 @@ namespace Magellan
         dd->configVersion = atoi(packet.x_magellan_cv);
         dd->rootUrl.assign(packet.location);
 
+        /*
         Core::getLogger()->d(TAG, "type=%s\nloc=%s\nmeth=%d\nsm=%s\nst=%s\nusn=%s\nupd=%" PRIu64 "\ncc=%s",
                             packet.device_type,
                             packet.location,
@@ -622,7 +687,8 @@ namespace Magellan
                             packet.st,
                             packet.usn,
                             packet.received_ts,
-                            packet.cache_control);        
+                            packet.cache_control);    
+        */
 
         return dd;
     }

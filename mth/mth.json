@@ -8,7 +8,7 @@
       "caBundle":"../certs/ca.crt",
       "verifyPeer":true,
       "verifyHost":false,
-      "logUrlOperation":false,
+      "logUrlOperation":true,
       "abandonUrlsAfterConsecutiveErrors": false,
       "urlCheckerIntervalMs":2500,
       "urlRetryIntervalMs":5000,
@@ -31,8 +31,6 @@
       "maxReconnectMs": 10000,
       "mx": 5,
       "st": "urn:rallytac-magellan:device:Gateway:1",
-      "xxx_st": "ssdp:all",
       "userAgent":""
    }
 }
-
